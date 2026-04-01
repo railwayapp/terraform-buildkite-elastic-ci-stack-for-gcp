@@ -131,8 +131,8 @@ variable "root_disk_type" {
   default     = "pd-balanced"
 
   validation {
-    condition     = contains(["pd-standard", "pd-balanced", "pd-ssd"], var.root_disk_type)
-    error_message = "Root disk type must be one of: pd-standard, pd-balanced, pd-ssd."
+    condition     = contains(["pd-standard", "pd-balanced", "pd-ssd", "hyperdisk-balanced", "hyperdisk-extreme", "hyperdisk-throughput"], var.root_disk_type)
+    error_message = "Root disk type must be one of: pd-standard, pd-balanced, pd-ssd, hyperdisk-balanced, hyperdisk-extreme, hyperdisk-throughput."
   }
 }
 
