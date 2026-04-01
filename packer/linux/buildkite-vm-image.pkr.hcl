@@ -160,6 +160,11 @@ build {
     script = "scripts/configure-docker"
   }
 
+  # Deno runtime for pipeline generation
+  provisioner "shell" {
+    script = "scripts/install-deno"
+  }
+
   # Session Manager-like functionality for GCP
   provisioner "shell" {
     script = "scripts/install-gcp-tools"
