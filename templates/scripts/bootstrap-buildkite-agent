@@ -91,6 +91,15 @@ if [ -x /usr/bin/fix-buildkite-agent-builds-permissions ]; then
   sudo /usr/bin/fix-buildkite-agent-builds-permissions
 fi
 
+# Pre-warm the git mirror for the mono repo so the first job doesn't wait
+MIRROR_PATH="/var/lib/buildkite-agent/git-mirrors/git-github-com-railwayapp-mono-git"
+if [[ ! -d "$MIRROR_PATH" ]]; then
+  echo "Pre-warming git mirror for railwayapp/mono..."
+  sudo -u buildkite-agent git clone --mirror -v -- git@github.com:railwayapp/mono.git "$MIRROR_PATH" &
+  MIRROR_PID=$!
+  echo "Mirror clone running in background (pid $MIRROR_PID)"
+fi
+
 # Enable and start the buildkite-agent service
 echo "Starting Buildkite agent service..."
 sudo systemctl daemon-reload
