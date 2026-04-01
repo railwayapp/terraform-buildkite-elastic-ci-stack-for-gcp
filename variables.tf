@@ -78,6 +78,12 @@ variable "buildkite_agent_tags" {
   default     = ""
 }
 
+variable "buildkite_spawn" {
+  description = "Number of parallel agents to run per instance"
+  type        = number
+  default     = 1
+}
+
 variable "buildkite_agent_release" {
   description = "Buildkite agent release channel: 'stable' (recommended), 'beta', or 'edge'"
   type        = string

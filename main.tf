@@ -50,6 +50,7 @@ module "compute" {
   buildkite_organization_slug  = var.buildkite_organization_slug
   buildkite_agent_token        = var.buildkite_agent_token
   buildkite_agent_token_secret = var.buildkite_agent_token_secret
+  buildkite_spawn              = var.buildkite_spawn
   buildkite_agent_release      = var.buildkite_agent_release
   buildkite_queue              = var.buildkite_queue
   buildkite_agent_tags         = var.buildkite_agent_tags
