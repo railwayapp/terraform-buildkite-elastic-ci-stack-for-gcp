@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DENO_VERSION="2.1.4"
+DENO_VERSION="2.7.9"
 
 echo "Installing Deno ${DENO_VERSION}..."
 
