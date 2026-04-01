@@ -88,15 +88,16 @@ if [ -f /tmp/conf/buildkite-agent/scripts/terminate-instance ]; then
 fi
 
 # Skip SSH host key checking for GitHub so git clone never prompts
+# Note: buildkite-agent home is /home/buildkite-agent (not /var/lib/buildkite-agent)
 echo "Configuring SSH for buildkite-agent..."
-sudo -u buildkite-agent mkdir -p /var/lib/buildkite-agent/.ssh
-sudo -u buildkite-agent chmod 700 /var/lib/buildkite-agent/.ssh
-cat <<'EOF' | sudo -u buildkite-agent tee /var/lib/buildkite-agent/.ssh/config > /dev/null
+sudo -u buildkite-agent mkdir -p /home/buildkite-agent/.ssh
+sudo -u buildkite-agent chmod 700 /home/buildkite-agent/.ssh
+cat <<'EOF' | sudo -u buildkite-agent tee /home/buildkite-agent/.ssh/config > /dev/null
 Host github.com
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
 EOF
-sudo -u buildkite-agent chmod 600 /var/lib/buildkite-agent/.ssh/config
+sudo -u buildkite-agent chmod 600 /home/buildkite-agent/.ssh/config
 
 # Don't enable or start the service - that happens at VM boot via bootstrap
 sudo systemctl daemon-reload

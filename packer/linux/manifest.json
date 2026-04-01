@@ -8,7 +8,25 @@
       "artifact_id": "buildkite-ci-stack-x86-64-2026-04-01-1312",
       "packer_run_uuid": "18c98346-6805-29c7-0176-653a956075d3",
       "custom_data": null
+    },
+    {
+      "name": "buildkite-ci-stack",
+      "builder_type": "googlecompute",
+      "build_time": 1775067116,
+      "files": null,
+      "artifact_id": "buildkite-ci-stack-x86-64-2026-04-01-1804",
+      "packer_run_uuid": "40062a45-be7a-96fb-62e8-2f60afc37a3c",
+      "custom_data": null
+    },
+    {
+      "name": "buildkite-ci-stack",
+      "builder_type": "googlecompute",
+      "build_time": 1775067742,
+      "files": null,
+      "artifact_id": "buildkite-ci-stack-x86-64-2026-04-01-1814",
+      "packer_run_uuid": "98a9f0ab-350a-085c-aaf1-f0b826d7b4a8",
+      "custom_data": null
     }
   ],
-  "last_run_uuid": "18c98346-6805-29c7-0176-653a956075d3"
+  "last_run_uuid": "98a9f0ab-350a-085c-aaf1-f0b826d7b4a8"
 }
