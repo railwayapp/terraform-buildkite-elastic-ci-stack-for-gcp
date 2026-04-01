@@ -6,7 +6,7 @@ DENO_VERSION="2.1.4"
 
 echo "Installing Deno ${DENO_VERSION}..."
 
-curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh -s "v${DENO_VERSION}"
+curl -fsSL https://deno.land/install.sh | sudo DENO_INSTALL=/usr/local sh -s "v${DENO_VERSION}"
 
 echo "Deno installed:"
 deno --version
