@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Default values
 PROJECT_ID=""
 ZONE="us-central1-a"
-MACHINE_TYPE="e2-standard-4"
+MACHINE_TYPE="n2-standard-8"
 ARCH="x86-64"
 BUILD_NUMBER="$(date +%Y%m%d-%H%M%S)"
 AGENT_VERSION="stable"
