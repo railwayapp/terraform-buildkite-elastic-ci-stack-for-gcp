@@ -105,7 +105,7 @@ if [[ ! -d "$MIRROR_PATH" ]]; then
     echo "$SSH_KEY" > "$KEYFILE"
     chmod 600 "$KEYFILE"
     sudo -u buildkite-agent GIT_SSH_COMMAND="ssh -i $KEYFILE -o StrictHostKeyChecking=no" \
-      git clone --mirror -v --filter=blob:limit=5m -- git@github.com:railwayapp/mono.git "$MIRROR_PATH" || true
+      git clone --mirror -v --filter=blob:limit=50m -- git@github.com:railwayapp/mono.git "$MIRROR_PATH" || true
     rm -f "$KEYFILE"
   else
     echo "Warning: No SSH key in Secret Manager, skipping mirror pre-warm"

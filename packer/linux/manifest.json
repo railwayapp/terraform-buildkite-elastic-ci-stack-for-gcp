@@ -98,7 +98,16 @@
       "artifact_id": "buildkite-ci-stack-x86-64-2026-04-02-1655",
       "packer_run_uuid": "af8dd9ed-f877-1754-55fa-6f5bb09a11c7",
       "custom_data": null
+    },
+    {
+      "name": "buildkite-ci-stack",
+      "builder_type": "googlecompute",
+      "build_time": 1775153944,
+      "files": null,
+      "artifact_id": "buildkite-ci-stack-x86-64-2026-04-02-1812",
+      "packer_run_uuid": "8a0fdba3-b416-4b65-6a69-86caa5e18f45",
+      "custom_data": null
     }
   ],
-  "last_run_uuid": "af8dd9ed-f877-1754-55fa-6f5bb09a11c7"
+  "last_run_uuid": "8a0fdba3-b416-4b65-6a69-86caa5e18f45"
 }
