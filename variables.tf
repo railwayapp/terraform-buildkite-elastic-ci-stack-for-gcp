@@ -84,6 +84,12 @@ variable "buildkite_spawn" {
   default     = 1
 }
 
+variable "buildkite_git_clone_mirror_flags" {
+  description = "Flags for git clone --mirror (e.g. '-v --filter=blob:limit=5m')"
+  type        = string
+  default     = "-v"
+}
+
 variable "buildkite_agent_release" {
   description = "Buildkite agent release channel: 'stable' (recommended), 'beta', or 'edge'"
   type        = string

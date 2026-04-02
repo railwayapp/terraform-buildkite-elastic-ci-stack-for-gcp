@@ -52,7 +52,8 @@ resource "google_compute_instance_template" "buildkite_agent" {
     buildkite-queue        = var.buildkite_queue
     buildkite-tags         = var.buildkite_agent_tags
     buildkite-api-endpoint = var.buildkite_api_endpoint
-    buildkite-spawn        = var.buildkite_spawn
+    buildkite-spawn                  = var.buildkite_spawn
+    buildkite-git-clone-mirror-flags = var.buildkite_git_clone_mirror_flags
   }
 
   metadata_startup_script = templatefile("${path.module}/templates/startup.sh.tftpl", {

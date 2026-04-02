@@ -6,7 +6,7 @@ build-path="/var/lib/buildkite-agent/builds"
 hooks-path="/etc/buildkite-agent/hooks"
 plugins-path="/var/lib/buildkite-agent/plugins"
 git-mirrors-path="/var/lib/buildkite-agent/git-mirrors"
-git-clone-mirror-flags="-v --filter=blob:limit=5m"
+git-clone-mirror-flags="$BUILDKITE_GIT_CLONE_MIRROR_FLAGS"
 spawn=$BUILDKITE_SPAWN
 cancel-grace-period=10
 disconnect-after-job=false

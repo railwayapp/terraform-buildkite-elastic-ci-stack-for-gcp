@@ -39,6 +39,7 @@ BUILDKITE_PRIORITY=$(get_metadata "buildkite-priority" "1")
 BUILDKITE_TAGS=$(get_metadata "buildkite-tags" "")
 BUILDKITE_API_ENDPOINT=$(get_metadata "buildkite-api-endpoint" "")
 BUILDKITE_SPAWN=$(get_metadata "buildkite-spawn" "1")
+BUILDKITE_GIT_CLONE_MIRROR_FLAGS=$(get_metadata "buildkite-git-clone-mirror-flags" "-v")
 
 # GCP context (for tags)
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/project/project-id")
@@ -53,6 +54,7 @@ export BUILDKITE_PRIORITY
 export BUILDKITE_TAGS
 export BUILDKITE_API_ENDPOINT
 export BUILDKITE_SPAWN
+export BUILDKITE_GIT_CLONE_MIRROR_FLAGS
 export PROJECT_ID
 export ZONE
 export INSTANCE_NAME
