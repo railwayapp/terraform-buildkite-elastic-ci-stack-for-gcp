@@ -93,11 +93,22 @@ if [ -x /usr/bin/fix-buildkite-agent-builds-permissions ]; then
   sudo /usr/bin/fix-buildkite-agent-builds-permissions
 fi
 
-# Pre-warm the git mirror for the mono repo before the agent starts accepting jobs
+# Pre-warm the git mirror for the mono repo before the agent starts accepting jobs.
+# Load the SSH key from Secret Manager first since git clone needs it.
 MIRROR_PATH="/var/lib/buildkite-agent/git-mirrors/git-github-com-railwayapp-mono-git"
 if [[ ! -d "$MIRROR_PATH" ]]; then
   echo "Pre-warming git mirror for railwayapp/mono..."
-  sudo -u buildkite-agent git clone --mirror -v -- git@github.com:railwayapp/mono.git "$MIRROR_PATH" || true
+  SSH_KEY=$(gcloud secrets versions access latest --secret=private_ssh_key --project="$PROJECT_ID" 2>/dev/null || true)
+  if [[ -n "$SSH_KEY" ]]; then
+    KEYFILE=$(mktemp)
+    echo "$SSH_KEY" > "$KEYFILE"
+    chmod 600 "$KEYFILE"
+    sudo -u buildkite-agent GIT_SSH_COMMAND="ssh -i $KEYFILE -o StrictHostKeyChecking=no" \
+      git clone --mirror -v -- git@github.com:railwayapp/mono.git "$MIRROR_PATH" || true
+    rm -f "$KEYFILE"
+  else
+    echo "Warning: No SSH key found, skipping mirror pre-warm"
+  fi
   echo "Mirror clone complete"
 fi
 
