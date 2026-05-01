@@ -157,6 +157,23 @@ resource "google_compute_region_autoscaler" "buildkite_agents" {
       filter = "resource.type = \"global\" AND metric.label.Queue = \"${var.buildkite_queue}\""
     }
 
+    # Throttle scale-in so brief lulls in queue depth don't immediately
+    # terminate cached instances. Without this block GCP applies its
+    # default 10-minute stabilization window. With it set we extend that
+    # to `time_window_sec` and cap how many replicas can be scaled in
+    # per window via `max_scaled_in_replicas`. Useful when first-pull
+    # latency on fresh agents (golangci-lint, ci-ansible build, etc.)
+    # is a meaningful chunk of step wallclock.
+    dynamic "scale_in_control" {
+      for_each = var.scale_in_control_time_window_sec > 0 ? [1] : []
+      content {
+        time_window_sec = var.scale_in_control_time_window_sec
+        max_scaled_in_replicas {
+          fixed = var.scale_in_control_max_scaled_in_replicas
+        }
+      }
+    }
+
     mode = "ON"
   }
 

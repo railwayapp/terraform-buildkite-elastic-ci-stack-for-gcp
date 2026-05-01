@@ -189,6 +189,26 @@ variable "cooldown_period" {
   }
 }
 
+variable "scale_in_control_time_window_sec" {
+  description = <<-EOT
+    Time window (seconds) over which scale-in events are throttled. Set to 0
+    to use GCP's default 10-minute stabilization window. Higher values keep
+    instances alive longer after demand drops, useful when first-pull
+    latency on fresh agents is significant.
+  EOT
+  type        = number
+  default     = 0
+}
+
+variable "scale_in_control_max_scaled_in_replicas" {
+  description = <<-EOT
+    Maximum number of replicas that can be scaled in within
+    `scale_in_control_time_window_sec`. Defaults to 1 — most conservative.
+  EOT
+  type        = number
+  default     = 1
+}
+
 variable "autoscaling_jobs_per_instance" {
   description = "Target number of Buildkite jobs per instance for autoscaling. Lower values = more parallelization, higher cost."
   type        = number
