@@ -16,3 +16,4 @@ cleanup.sh
 ## Packer build files
 build/
 packer/.buildkite/
+packer/linux/manifest.json
