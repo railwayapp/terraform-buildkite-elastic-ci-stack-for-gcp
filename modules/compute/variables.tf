@@ -217,6 +217,24 @@ variable "autoscaling_jobs_per_instance" {
   }
 }
 
+variable "autoscaling_metric_names" {
+  description = "Buildkite metrics to use for autoscaling decisions. The autoscaler uses the largest recommendation across all metrics."
+  type        = list(string)
+  default     = ["UnfinishedJobsCount"]
+
+  validation {
+    condition = alltrue([
+      for metric_name in var.autoscaling_metric_names : contains([
+        "ScheduledJobsCount",
+        "RunningJobsCount",
+        "UnfinishedJobsCount",
+        "WaitingJobsCount",
+      ], metric_name)
+    ])
+    error_message = "autoscaling_metric_names must contain only: ScheduledJobsCount, RunningJobsCount, UnfinishedJobsCount, WaitingJobsCount."
+  }
+}
+
 variable "enable_autohealing" {
   description = "Enable autohealing for unhealthy instances"
   type        = bool

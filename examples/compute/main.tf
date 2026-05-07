@@ -50,6 +50,7 @@ module "compute" {
   max_size                      = var.max_size
   cooldown_period               = var.cooldown_period
   autoscaling_jobs_per_instance = var.autoscaling_jobs_per_instance
+  autoscaling_metric_names      = var.autoscaling_metric_names
   enable_autoscaling            = var.enable_autoscaling
 
   # Health check configuration

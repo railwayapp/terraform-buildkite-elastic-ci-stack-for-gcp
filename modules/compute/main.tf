@@ -46,12 +46,12 @@ resource "google_compute_instance_template" "buildkite_agent" {
   }
 
   metadata = {
-    enable-oslogin         = "FALSE"
-    buildkite-token        = var.buildkite_agent_token
-    buildkite-token-secret = var.buildkite_agent_token_secret
-    buildkite-queue        = var.buildkite_queue
-    buildkite-tags         = var.buildkite_agent_tags
-    buildkite-api-endpoint = var.buildkite_api_endpoint
+    enable-oslogin                   = "FALSE"
+    buildkite-token                  = var.buildkite_agent_token
+    buildkite-token-secret           = var.buildkite_agent_token_secret
+    buildkite-queue                  = var.buildkite_queue
+    buildkite-tags                   = var.buildkite_agent_tags
+    buildkite-api-endpoint           = var.buildkite_api_endpoint
     buildkite-spawn                  = var.buildkite_spawn
     buildkite-git-clone-mirror-flags = var.buildkite_git_clone_mirror_flags
   }
@@ -138,23 +138,22 @@ resource "google_compute_region_autoscaler" "buildkite_agents" {
     max_replicas    = var.max_size
     cooldown_period = var.cooldown_period
 
-    # Using UnfinishedJobsCount as the primary scaling metric.
-    # UnfinishedJobsCount = Scheduled + Running + Waiting jobs
-    #
-    # The autoscaler will scale to: ceil(metric_value / target)
-    # If UnfinishedJobsCount = 13 and target = 1, we get 13 instances
-    # 
+    # The autoscaler will scale to: ceil(metric_value / target).
     # Note: Metrics are published by buildkite-agent-metrics to:
     # custom.googleapis.com/buildkite/<org-slug>/<MetricName>
     # The filter matches the Queue label to ensure we're scaling based on the correct queue.
     #
     # Important: The metrics function converts hyphens to underscores in the org slug
     # (GCP custom metrics don't allow hyphens), so we use local.metrics_org_slug here.
-    metric {
-      name   = "custom.googleapis.com/buildkite/${local.metrics_org_slug}/UnfinishedJobsCount"
-      target = var.autoscaling_jobs_per_instance
-      type   = "GAUGE"
-      filter = "resource.type = \"global\" AND metric.label.Queue = \"${var.buildkite_queue}\""
+    dynamic "metric" {
+      for_each = toset(var.autoscaling_metric_names)
+
+      content {
+        name   = "custom.googleapis.com/buildkite/${local.metrics_org_slug}/${metric.value}"
+        target = var.autoscaling_jobs_per_instance
+        type   = "GAUGE"
+        filter = "resource.type = \"global\" AND metric.label.Queue = \"${var.buildkite_queue}\""
+      }
     }
 
     # Throttle scale-in so brief lulls in queue depth don't immediately

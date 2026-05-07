@@ -47,15 +47,15 @@ module "compute" {
   stack_name = var.stack_name
 
   # Buildkite configuration
-  buildkite_organization_slug  = var.buildkite_organization_slug
-  buildkite_agent_token        = var.buildkite_agent_token
-  buildkite_agent_token_secret = var.buildkite_agent_token_secret
-  buildkite_spawn                    = var.buildkite_spawn
-  buildkite_git_clone_mirror_flags   = var.buildkite_git_clone_mirror_flags
-  buildkite_agent_release      = var.buildkite_agent_release
-  buildkite_queue              = var.buildkite_queue
-  buildkite_agent_tags         = var.buildkite_agent_tags
-  buildkite_api_endpoint       = var.buildkite_api_endpoint
+  buildkite_organization_slug      = var.buildkite_organization_slug
+  buildkite_agent_token            = var.buildkite_agent_token
+  buildkite_agent_token_secret     = var.buildkite_agent_token_secret
+  buildkite_spawn                  = var.buildkite_spawn
+  buildkite_git_clone_mirror_flags = var.buildkite_git_clone_mirror_flags
+  buildkite_agent_release          = var.buildkite_agent_release
+  buildkite_queue                  = var.buildkite_queue
+  buildkite_agent_tags             = var.buildkite_agent_tags
+  buildkite_api_endpoint           = var.buildkite_api_endpoint
 
   # Instance configuration
   machine_type      = var.machine_type
@@ -70,6 +70,7 @@ module "compute" {
   scale_in_control_time_window_sec        = var.scale_in_control_time_window_sec
   scale_in_control_max_scaled_in_replicas = var.scale_in_control_max_scaled_in_replicas
   autoscaling_jobs_per_instance           = var.autoscaling_jobs_per_instance
+  autoscaling_metric_names                = var.autoscaling_metric_names
   enable_autoscaling                      = var.enable_autoscaling
 
   # Health check configuration
