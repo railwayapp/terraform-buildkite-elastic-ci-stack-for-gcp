@@ -146,6 +146,7 @@ resource "google_cloud_scheduler_job" "metrics_trigger" {
 
     oidc_token {
       service_account_email = local.service_account_email
+      audience              = google_cloudfunctions2_function.metrics_function.service_config[0].uri
     }
   }
 
