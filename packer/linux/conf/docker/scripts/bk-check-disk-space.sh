@@ -5,7 +5,7 @@ set -euo pipefail
 # Returns 0 if disk space is healthy, 1 if critically low
 
 # Configurable thresholds (in KB for disk, count for inodes)
-DISK_MIN_AVAILABLE=${DISK_MIN_AVAILABLE:-5242880}  # 5GB in KB
+DISK_MIN_AVAILABLE=${DISK_MIN_AVAILABLE:-10485760}  # 10GB in KB
 DISK_MIN_INODES=${DISK_MIN_INODES:-250000}         # Docker needs lots of inodes
 
 # Get Docker data directory from daemon.json
