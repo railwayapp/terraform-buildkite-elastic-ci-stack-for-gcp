@@ -113,6 +113,21 @@ if [[ ! -d "$MIRROR_PATH" ]]; then
   echo "Mirror clone complete"
 fi
 
+# Docker Hub authentication, if a `buildkite-dockerhub-token` secret is
+# present in this project. The secret value is the raw OAT; the username is
+# the `railwaycorp` org. Without this, all agents share the Cloud NAT egress
+# IP and the anonymous 100-pulls-per-6h Docker Hub rate limit.
+if DH_TOKEN=$(gcloud secrets versions access latest --secret=buildkite-dockerhub-token --project="$PROJECT_ID" 2>/dev/null); then
+  DH_AUTH=$(printf 'railwaycorp:%s' "$DH_TOKEN" | base64 -w0)
+  sudo -u buildkite-agent mkdir -p /var/lib/buildkite-agent/.docker
+  printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}\n' "$DH_AUTH" \
+    | sudo -u buildkite-agent tee /var/lib/buildkite-agent/.docker/config.json > /dev/null
+  sudo chmod 600 /var/lib/buildkite-agent/.docker/config.json
+  echo "Configured Docker Hub auth for buildkite-agent (user=railwaycorp)"
+else
+  echo "No buildkite-dockerhub-token secret in $PROJECT_ID, skipping Docker Hub auth"
+fi
+
 # Enable and start the buildkite-agent service
 echo "Starting Buildkite agent service..."
 sudo systemctl daemon-reload
