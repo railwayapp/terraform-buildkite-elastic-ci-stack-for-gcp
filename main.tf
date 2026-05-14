@@ -56,7 +56,6 @@ module "compute" {
   buildkite_queue                  = var.buildkite_queue
   buildkite_agent_tags             = var.buildkite_agent_tags
   buildkite_api_endpoint           = var.buildkite_api_endpoint
-  dockerhub_cache_url              = var.dockerhub_cache_url
 
   # Instance configuration
   machine_type      = var.machine_type

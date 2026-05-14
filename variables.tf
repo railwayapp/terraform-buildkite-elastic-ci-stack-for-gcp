@@ -107,12 +107,6 @@ variable "buildkite_api_endpoint" {
   default     = "https://agent.buildkite.com/v3"
 }
 
-variable "dockerhub_cache_url" {
-  description = "Artifact Registry remote-repo URL to use as a Docker Hub pull-through cache (e.g. https://us-west1-docker.pkg.dev/PROJECT/dockerhub-cache). When set, the bootstrap merges this into /etc/docker/daemon.json as a registry-mirrors entry and configures gcloud as the AR credential helper. Leave empty to pull directly from docker.io."
-  type        = string
-  default     = ""
-}
-
 # Instance Configuration
 
 variable "machine_type" {

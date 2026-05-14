@@ -54,7 +54,6 @@ resource "google_compute_instance_template" "buildkite_agent" {
     buildkite-api-endpoint           = var.buildkite_api_endpoint
     buildkite-spawn                  = var.buildkite_spawn
     buildkite-git-clone-mirror-flags = var.buildkite_git_clone_mirror_flags
-    buildkite-dockerhub-cache-url    = var.dockerhub_cache_url
   }
 
   metadata_startup_script = templatefile("${path.module}/templates/startup.sh.tftpl", {

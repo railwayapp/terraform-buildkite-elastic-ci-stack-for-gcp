@@ -40,7 +40,6 @@ BUILDKITE_TAGS=$(get_metadata "buildkite-tags" "")
 BUILDKITE_API_ENDPOINT=$(get_metadata "buildkite-api-endpoint" "")
 BUILDKITE_SPAWN=$(get_metadata "buildkite-spawn" "1")
 BUILDKITE_GIT_CLONE_MIRROR_FLAGS=$(get_metadata "buildkite-git-clone-mirror-flags" "-v")
-BUILDKITE_DOCKERHUB_CACHE_URL=$(get_metadata "buildkite-dockerhub-cache-url" "")
 
 # GCP context (for tags)
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/project/project-id")
@@ -129,45 +128,30 @@ else
   echo "No buildkite-dockerhub-token secret in $PROJECT_ID, skipping Docker Hub auth"
 fi
 
-# Docker Hub pull-through cache, if a buildkite-dockerhub-cache-url is set
-# via instance metadata (e.g. https://us-west1-docker.pkg.dev/PROJECT/dockerhub-cache).
-# Merges a registry-mirrors entry into /etc/docker/daemon.json and points
-# Docker at gcloud as the AR credential helper, then restarts docker so the
-# daemon picks up the mirror before the agent starts accepting jobs.
-if [[ -n "$BUILDKITE_DOCKERHUB_CACHE_URL" ]]; then
-  echo "Configuring Docker Hub pull-through cache at $BUILDKITE_DOCKERHUB_CACHE_URL"
-
-  CACHE_HOST=${BUILDKITE_DOCKERHUB_CACHE_URL#*://}
-  CACHE_HOST=${CACHE_HOST%%/*}
-
-  # Add the gcloud credential helper to the agent's docker config. We can't
-  # use `gcloud auth configure-docker` here — it writes to $HOME/.docker/
-  # config.json, and `sudo -u buildkite-agent` resolves $HOME from passwd
-  # (/home/buildkite-agent), but the running agent has HOME=/var/lib/
-  # buildkite-agent set in its systemd unit. So gcloud writes one place
-  # and the daemon reads from another. Merge credHelpers directly into the
-  # file that already holds the Hub auth.
-  AGENT_DOCKER_CFG=/var/lib/buildkite-agent/.docker/config.json
-  sudo -u buildkite-agent mkdir -p /var/lib/buildkite-agent/.docker
-  if [[ ! -f "$AGENT_DOCKER_CFG" ]]; then
-    echo '{}' | sudo -u buildkite-agent tee "$AGENT_DOCKER_CFG" > /dev/null
-  fi
-  sudo jq --arg host "$CACHE_HOST" '.credHelpers[$host] = "gcloud"' "$AGENT_DOCKER_CFG" \
-    | sudo -u buildkite-agent tee "$AGENT_DOCKER_CFG.new" > /dev/null
-  sudo mv "$AGENT_DOCKER_CFG.new" "$AGENT_DOCKER_CFG"
-  sudo chown buildkite-agent:buildkite-agent "$AGENT_DOCKER_CFG"
-  sudo chmod 600 "$AGENT_DOCKER_CFG"
-
-  # Merge registry-mirrors into daemon.json, preserving storage-driver
-  # and anything else already configured.
-  sudo jq --arg url "$BUILDKITE_DOCKERHUB_CACHE_URL" \
-    '. + {"registry-mirrors": [$url]}' /etc/docker/daemon.json \
-    | sudo tee /etc/docker/daemon.json.new > /dev/null
-  sudo mv /etc/docker/daemon.json.new /etc/docker/daemon.json
-
-  sudo systemctl restart docker
-  echo "Restarted docker with registry mirror"
+# Configure gcloud as the docker credential helper for the regional
+# Artifact Registry endpoint. Image references that point at
+# <region>-docker.pkg.dev (e.g. for an AR remote repo fronting Docker Hub
+# or for first-party Railway images) authenticate via the GCE metadata
+# server using the agent SA — no per-user setup needed.
+#
+# We can't use `gcloud auth configure-docker` here — it writes to
+# $HOME/.docker/config.json, and `sudo -u buildkite-agent` resolves $HOME
+# from passwd (/home/buildkite-agent), but the running agent has
+# HOME=/var/lib/buildkite-agent set in its systemd unit. So gcloud would
+# write one place and the daemon would read from another. Merge
+# credHelpers directly into the file that already holds the Hub auth.
+AR_HOST="${ZONE%-*}-docker.pkg.dev"
+AGENT_DOCKER_CFG=/var/lib/buildkite-agent/.docker/config.json
+sudo -u buildkite-agent mkdir -p /var/lib/buildkite-agent/.docker
+if [[ ! -f "$AGENT_DOCKER_CFG" ]]; then
+  echo '{}' | sudo -u buildkite-agent tee "$AGENT_DOCKER_CFG" > /dev/null
 fi
+sudo jq --arg host "$AR_HOST" '.credHelpers[$host] = "gcloud"' "$AGENT_DOCKER_CFG" \
+  | sudo -u buildkite-agent tee "$AGENT_DOCKER_CFG.new" > /dev/null
+sudo mv "$AGENT_DOCKER_CFG.new" "$AGENT_DOCKER_CFG"
+sudo chown buildkite-agent:buildkite-agent "$AGENT_DOCKER_CFG"
+sudo chmod 600 "$AGENT_DOCKER_CFG"
+echo "Configured AR credential helper for $AR_HOST"
 
 # Enable and start the buildkite-agent service
 echo "Starting Buildkite agent service..."
