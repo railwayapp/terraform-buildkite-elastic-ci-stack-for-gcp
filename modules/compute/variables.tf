@@ -149,6 +149,12 @@ variable "buildkite_api_endpoint" {
   default     = "https://agent.buildkite.com/v3"
 }
 
+variable "dockerhub_cache_url" {
+  description = "Artifact Registry remote-repo URL to use as a Docker Hub pull-through cache. Passed to the bootstrap script via instance metadata; empty disables the mirror."
+  type        = string
+  default     = ""
+}
+
 variable "min_size" {
   description = "Minimum number of instances in the managed instance group"
   type        = number

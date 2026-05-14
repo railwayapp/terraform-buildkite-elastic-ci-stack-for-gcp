@@ -40,6 +40,7 @@ BUILDKITE_TAGS=$(get_metadata "buildkite-tags" "")
 BUILDKITE_API_ENDPOINT=$(get_metadata "buildkite-api-endpoint" "")
 BUILDKITE_SPAWN=$(get_metadata "buildkite-spawn" "1")
 BUILDKITE_GIT_CLONE_MIRROR_FLAGS=$(get_metadata "buildkite-git-clone-mirror-flags" "-v")
+BUILDKITE_DOCKERHUB_CACHE_URL=$(get_metadata "buildkite-dockerhub-cache-url" "")
 
 # GCP context (for tags)
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/project/project-id")
@@ -126,6 +127,32 @@ if DH_TOKEN=$(gcloud secrets versions access latest --secret=buildkite-dockerhub
   echo "Configured Docker Hub auth for buildkite-agent (user=railwaycorp)"
 else
   echo "No buildkite-dockerhub-token secret in $PROJECT_ID, skipping Docker Hub auth"
+fi
+
+# Docker Hub pull-through cache, if a buildkite-dockerhub-cache-url is set
+# via instance metadata (e.g. https://us-west1-docker.pkg.dev/PROJECT/dockerhub-cache).
+# Merges a registry-mirrors entry into /etc/docker/daemon.json and points
+# Docker at gcloud as the AR credential helper, then restarts docker so the
+# daemon picks up the mirror before the agent starts accepting jobs.
+if [[ -n "$BUILDKITE_DOCKERHUB_CACHE_URL" ]]; then
+  echo "Configuring Docker Hub pull-through cache at $BUILDKITE_DOCKERHUB_CACHE_URL"
+
+  CACHE_HOST=${BUILDKITE_DOCKERHUB_CACHE_URL#*://}
+  CACHE_HOST=${CACHE_HOST%%/*}
+
+  # AR credential helper for the buildkite-agent user. gcloud merges into
+  # any existing config.json (preserving the Hub auth block above).
+  sudo -u buildkite-agent gcloud auth configure-docker "$CACHE_HOST" --quiet
+
+  # Merge registry-mirrors into daemon.json, preserving storage-driver
+  # and anything else already configured.
+  sudo jq --arg url "$BUILDKITE_DOCKERHUB_CACHE_URL" \
+    '. + {"registry-mirrors": [$url]}' /etc/docker/daemon.json \
+    | sudo tee /etc/docker/daemon.json.new > /dev/null
+  sudo mv /etc/docker/daemon.json.new /etc/docker/daemon.json
+
+  sudo systemctl restart docker
+  echo "Restarted docker with registry mirror"
 fi
 
 # Enable and start the buildkite-agent service
