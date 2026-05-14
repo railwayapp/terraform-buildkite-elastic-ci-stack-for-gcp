@@ -140,9 +140,23 @@ if [[ -n "$BUILDKITE_DOCKERHUB_CACHE_URL" ]]; then
   CACHE_HOST=${BUILDKITE_DOCKERHUB_CACHE_URL#*://}
   CACHE_HOST=${CACHE_HOST%%/*}
 
-  # AR credential helper for the buildkite-agent user. gcloud merges into
-  # any existing config.json (preserving the Hub auth block above).
-  sudo -u buildkite-agent gcloud auth configure-docker "$CACHE_HOST" --quiet
+  # Add the gcloud credential helper to the agent's docker config. We can't
+  # use `gcloud auth configure-docker` here — it writes to $HOME/.docker/
+  # config.json, and `sudo -u buildkite-agent` resolves $HOME from passwd
+  # (/home/buildkite-agent), but the running agent has HOME=/var/lib/
+  # buildkite-agent set in its systemd unit. So gcloud writes one place
+  # and the daemon reads from another. Merge credHelpers directly into the
+  # file that already holds the Hub auth.
+  AGENT_DOCKER_CFG=/var/lib/buildkite-agent/.docker/config.json
+  sudo -u buildkite-agent mkdir -p /var/lib/buildkite-agent/.docker
+  if [[ ! -f "$AGENT_DOCKER_CFG" ]]; then
+    echo '{}' | sudo -u buildkite-agent tee "$AGENT_DOCKER_CFG" > /dev/null
+  fi
+  sudo jq --arg host "$CACHE_HOST" '.credHelpers[$host] = "gcloud"' "$AGENT_DOCKER_CFG" \
+    | sudo -u buildkite-agent tee "$AGENT_DOCKER_CFG.new" > /dev/null
+  sudo mv "$AGENT_DOCKER_CFG.new" "$AGENT_DOCKER_CFG"
+  sudo chown buildkite-agent:buildkite-agent "$AGENT_DOCKER_CFG"
+  sudo chmod 600 "$AGENT_DOCKER_CFG"
 
   # Merge registry-mirrors into daemon.json, preserving storage-driver
   # and anything else already configured.
