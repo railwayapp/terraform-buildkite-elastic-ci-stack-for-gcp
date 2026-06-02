@@ -86,11 +86,12 @@ resource "google_compute_region_instance_group_manager" "buildkite_agents" {
     instance_template = google_compute_instance_template.buildkite_agent.id
   }
 
-  distribution_policy_zones = var.zones
+  distribution_policy_zones        = var.zones
+  distribution_policy_target_shape = var.distribution_policy_target_shape
 
   update_policy {
     type                         = "PROACTIVE"
-    instance_redistribution_type = "PROACTIVE"
+    instance_redistribution_type = var.instance_redistribution_type
     minimal_action               = "REPLACE"
     max_surge_fixed              = var.max_surge
     max_unavailable_fixed        = var.max_unavailable

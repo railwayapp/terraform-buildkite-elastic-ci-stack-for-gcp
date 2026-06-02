@@ -364,3 +364,39 @@ variable "autoscaler_depends_on" {
   type        = any
   default     = []
 }
+
+variable "distribution_policy_target_shape" {
+  description = <<-EOT
+    Regional MIG zone distribution shape. "ANY" lets the MIG place instances in
+    whichever zone has capacity (best for ephemeral agent pools — survives a zone
+    running out of stock). "EVEN" forces balanced zone distribution and, combined
+    with proactive redistribution, makes the MIG delete+recreate instances to
+    rebalance — which deletes agents mid-job and thrashes endlessly when a zone is
+    capacity-exhausted. CI agents don't need zonal HA, so default to ANY.
+  EOT
+  type        = string
+  default     = "ANY"
+
+  validation {
+    condition     = contains(["ANY", "BALANCED", "EVEN", "ANY_SINGLE_ZONE"], var.distribution_policy_target_shape)
+    error_message = "target_shape must be one of ANY, BALANCED, EVEN, ANY_SINGLE_ZONE."
+  }
+}
+
+variable "instance_redistribution_type" {
+  description = <<-EOT
+    Whether the MIG proactively rebalances instances across zones. "NONE" leaves
+    the distribution alone; "PROACTIVE" deletes instances from over-represented
+    zones and recreates them elsewhere — with no awareness of whether an instance
+    is running a job, so it kills busy agents (exit 137) and loops forever when
+    recreates fail under capacity exhaustion. Must be NONE when target_shape is
+    ANY/BALANCED. Default NONE for agent pools.
+  EOT
+  type        = string
+  default     = "NONE"
+
+  validation {
+    condition     = contains(["NONE", "PROACTIVE"], var.instance_redistribution_type)
+    error_message = "instance_redistribution_type must be NONE or PROACTIVE."
+  }
+}
