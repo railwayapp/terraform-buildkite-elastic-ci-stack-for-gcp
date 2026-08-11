@@ -81,6 +81,8 @@ module "compute" {
   health_check_healthy_threshold   = var.health_check_healthy_threshold
   health_check_unhealthy_threshold = var.health_check_unhealthy_threshold
   health_check_initial_delay_sec   = var.health_check_initial_delay_sec
+  health_check_type                = var.health_check_type
+  health_check_request_path        = var.health_check_request_path
 
   # Update policy configuration
   max_surge       = var.max_surge
