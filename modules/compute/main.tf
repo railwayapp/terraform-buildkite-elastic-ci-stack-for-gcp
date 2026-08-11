@@ -121,8 +121,19 @@ resource "google_compute_health_check" "autohealing" {
   healthy_threshold   = var.health_check_healthy_threshold
   unhealthy_threshold = var.health_check_unhealthy_threshold
 
-  tcp_health_check {
-    port = var.health_check_port
+  dynamic "tcp_health_check" {
+    for_each = var.health_check_type == "tcp" ? [1] : []
+    content {
+      port = var.health_check_port
+    }
+  }
+
+  dynamic "http_health_check" {
+    for_each = var.health_check_type == "http" ? [1] : []
+    content {
+      port         = var.health_check_port
+      request_path = var.health_check_request_path
+    }
   }
 }
 

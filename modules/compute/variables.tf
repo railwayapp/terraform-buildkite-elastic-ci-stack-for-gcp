@@ -400,3 +400,38 @@ variable "instance_redistribution_type" {
     error_message = "instance_redistribution_type must be NONE or PROACTIVE."
   }
 }
+
+variable "health_check_type" {
+  description = <<-EOT
+    Protocol for the autohealing health check: "tcp" or "http".
+
+    "tcp" only proves the kernel completed a handshake, which a hung process
+    still does from its listen backlog, so it cannot distinguish a wedged
+    agent from a healthy one. "http" issues a GET and requires a 200.
+
+    Defaults to "tcp" to preserve existing behaviour.
+  EOT
+  type        = string
+  default     = "tcp"
+
+  validation {
+    condition     = contains(["tcp", "http"], var.health_check_type)
+    error_message = "Health check type must be either \"tcp\" or \"http\"."
+  }
+}
+
+variable "health_check_request_path" {
+  description = <<-EOT
+    Request path for an http health check. Ignored when health_check_type is
+    "tcp".
+
+    Point this at the agent's own health endpoint ("/" on
+    health-check-addr) rather than a per-worker endpoint. "/" reports process
+    liveness only, so a Buildkite API outage cannot mark the whole fleet
+    unhealthy at once and trigger a fleet-wide recreate loop. The per-worker
+    /agent/N endpoints return 500 on heartbeat failure and are unsafe to
+    autoheal on for that reason.
+  EOT
+  type        = string
+  default     = "/"
+}
