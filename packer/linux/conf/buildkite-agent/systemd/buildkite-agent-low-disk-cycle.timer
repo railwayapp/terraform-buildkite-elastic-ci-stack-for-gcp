@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Buildkite agent disk space every minute
+
+[Timer]
+Unit=buildkite-agent-low-disk-cycle.service
+OnBootSec=1min
+OnUnitInactiveSec=1min
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

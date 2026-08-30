@@ -1,0 +1,9 @@
+[Unit]
+Description=Cycle the Buildkite agent when its root disk is low
+
+[Service]
+Type=oneshot
+Environment=DISK_MIN_AVAILABLE_KB=10485760
+Environment=DISK_MIN_INODES=250000
+ExecStart=/usr/local/bin/deno run --no-config --allow-env=DISK_MIN_AVAILABLE_KB,DISK_MIN_INODES --allow-net=metadata.google.internal --allow-run=/usr/bin/df,/usr/bin/gcloud,/usr/bin/systemctl /usr/local/lib/buildkite-agent/cycle-agent-on-low-disk.ts
+TimeoutStartSec=12min

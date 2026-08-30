@@ -12,42 +12,36 @@ sudo chmod 644 /etc/docker/daemon.json
 # Restart Docker to apply configuration
 sudo systemctl restart docker
 
-# Install garbage collection scripts
-echo "Installing Docker garbage collection scripts..."
+# Remove the old low-disk GC implementation when building from an earlier
+# Buildkite image. Agent replacement now handles low disk space.
+sudo systemctl disable docker-low-disk-gc.timer 2>/dev/null || true
+sudo rm -f \
+  /etc/systemd/system/docker-low-disk-gc.service \
+  /etc/systemd/system/docker-low-disk-gc.timer \
+  /usr/local/bin/bk-check-disk-space.sh \
+  /usr/local/bin/docker-low-disk-gc
+
+# Install garbage collection script
+echo "Installing Docker garbage collection script..."
 sudo cp /tmp/conf/docker/scripts/docker-gc /usr/local/bin/docker-gc
-sudo cp /tmp/conf/docker/scripts/docker-low-disk-gc /usr/local/bin/docker-low-disk-gc
-sudo cp /tmp/conf/docker/scripts/bk-check-disk-space.sh /usr/local/bin/bk-check-disk-space.sh
-
 sudo chown root:root /usr/local/bin/docker-gc
-sudo chown root:root /usr/local/bin/docker-low-disk-gc
-sudo chown root:root /usr/local/bin/bk-check-disk-space.sh
-
 sudo chmod 755 /usr/local/bin/docker-gc
-sudo chmod 755 /usr/local/bin/docker-low-disk-gc
-sudo chmod 755 /usr/local/bin/bk-check-disk-space.sh
 
-# Install systemd units for garbage collection timers
+# Install the regular garbage collection timer. Low disk space is handled by
+# the Buildkite agent cycle monitor instead of increasingly aggressive pruning.
 echo "Installing systemd units..."
 sudo cp /tmp/conf/docker/systemd/docker-gc.service /etc/systemd/system/docker-gc.service
 sudo cp /tmp/conf/docker/systemd/docker-gc.timer /etc/systemd/system/docker-gc.timer
-sudo cp /tmp/conf/docker/systemd/docker-low-disk-gc.service /etc/systemd/system/docker-low-disk-gc.service
-sudo cp /tmp/conf/docker/systemd/docker-low-disk-gc.timer /etc/systemd/system/docker-low-disk-gc.timer
-
 sudo chown root:root /etc/systemd/system/docker-gc.*
-sudo chown root:root /etc/systemd/system/docker-low-disk-gc.*
-
 sudo chmod 644 /etc/systemd/system/docker-gc.service
 sudo chmod 644 /etc/systemd/system/docker-gc.timer
-sudo chmod 644 /etc/systemd/system/docker-low-disk-gc.service
-sudo chmod 644 /etc/systemd/system/docker-low-disk-gc.timer
 
 # Reload systemd to pick up new units
 sudo systemctl daemon-reload
 
 # Enable the timers (they will start on boot)
-echo "Enabling Docker garbage collection timers..."
+echo "Enabling Docker garbage collection timer..."
 sudo systemctl enable docker-gc.timer
-sudo systemctl enable docker-low-disk-gc.timer
 
 # Don't start the timers now (we're in the image build phase)
 # They will start automatically on first boot
