@@ -32,7 +32,7 @@ resource "google_project_iam_member" "agent_logging_writer" {
   member  = "serviceAccount:${google_service_account.agent.email}"
 }
 
-# Allows setting instance health and deleting instances within the managed instance group
+# Allows agents to recreate themselves when their disk runs low
 resource "google_project_iam_custom_role" "agent_instance_management" {
   role_id     = var.agent_custom_role_id
   title       = "Elastic CI Stack Agent Instance Management"
@@ -40,10 +40,9 @@ resource "google_project_iam_custom_role" "agent_instance_management" {
   project     = var.project_id
 
   permissions = [
-    # Equivalent to autoscaling:SetInstanceHealth, TerminateInstanceInAutoScalingGroup
     "compute.instanceGroupManagers.get",
+    "compute.instanceGroupManagers.update",
     "compute.instances.get",
-    "compute.instances.delete",
     "compute.zoneOperations.get",
     "compute.regionOperations.get",
   ]

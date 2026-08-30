@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+deno fmt --check packer/linux/conf/buildkite-agent/scripts/*.ts
+deno check packer/linux/conf/buildkite-agent/scripts/cycle-agent-on-low-disk.ts
+deno test packer/linux/conf/buildkite-agent/scripts/cycle-agent-on-low-disk_test.ts

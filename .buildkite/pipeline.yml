@@ -19,6 +19,11 @@ definitions:
       image: "hashicorp/packer:1.11"
       workdir: "/workdir"
       entrypoint: "/bin/sh"
+  deno: &deno
+    docker#v5.13.0:
+      image: "denoland/deno:2.7.9"
+      workdir: "/workdir"
+      entrypoint: "/bin/sh"
   markdownlint: &markdownlint
     docker#v5.13.0:
       image: "davidanson/markdownlint-cli2:v0.18.1"
@@ -78,6 +83,13 @@ steps:
         command: .buildkite/scripts/validate_packer
         plugins:
           - *packer
+
+      - label: ":deno: Deno Check"
+        key: deno-check
+        if_changed: "packer/linux/conf/buildkite-agent/scripts/*.ts"
+        command: .buildkite/scripts/validate_deno
+        plugins:
+          - *deno
 
       - label: ":bash: ShellCheck"
         key: shellcheck
