@@ -75,14 +75,20 @@ variable "service_account_email" {
 
 variable "sccache_version" {
   type        = string
-  description = "sccache release installed in the Buildkite agent image"
-  default     = "0.17.0"
+  description = "sccache artifact installed in the Buildkite agent image"
+  default     = "0.17.0-railway.2"
+}
+
+variable "sccache_url" {
+  type        = string
+  description = "URL of the pinned x86_64 musl sccache archive"
+  default     = "https://storage.googleapis.com/railway-public-packages/sccache/v0.17.0-railway.2/sccache-v0.17.0-railway.2-x86_64-unknown-linux-musl.tar.gz"
 }
 
 variable "sccache_sha256" {
   type        = string
-  description = "SHA-256 of the x86_64 musl sccache release archive"
-  default     = "67c4a96dd237c1f518f6b36083f270f9976d516f1e57fce891755ea782e50006"
+  description = "SHA-256 of the x86_64 musl sccache archive"
+  default     = "a13175b8def94993c3895f4eef48f2bc89081e20cdd046d61919fabf524e24c4"
 }
 
 source "googlecompute" "buildkite-ci-stack" {
@@ -167,6 +173,7 @@ build {
   provisioner "shell" {
     environment_vars = [
       "SCCACHE_VERSION=${var.sccache_version}",
+      "SCCACHE_URL=${var.sccache_url}",
       "SCCACHE_SHA256=${var.sccache_sha256}",
     ]
     script = "scripts/install-sccache"

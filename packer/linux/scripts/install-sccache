@@ -2,6 +2,7 @@
 set -euo pipefail
 
 : "${SCCACHE_VERSION:?SCCACHE_VERSION must be set by Packer}"
+: "${SCCACHE_URL:?SCCACHE_URL must be set by Packer}"
 : "${SCCACHE_SHA256:?SCCACHE_SHA256 must be set by Packer}"
 
 case "$(uname -m)" in
@@ -17,9 +18,7 @@ archive="$(mktemp)"
 extract_dir="$(mktemp -d)"
 trap 'rm -f "$archive"; rm -rf "$extract_dir"' EXIT
 
-curl -fsSL \
-  "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VERSION}/${asset}.tar.gz" \
-  -o "$archive"
+curl -fsSL "$SCCACHE_URL" -o "$archive"
 printf '%s  %s\n' "$SCCACHE_SHA256" "$archive" | sha256sum --check --status
 tar -xzf "$archive" -C "$extract_dir"
 sudo install -m 0755 "$extract_dir/$asset/sccache" /usr/local/bin/sccache
