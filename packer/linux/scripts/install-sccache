@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${SCCACHE_VERSION:?SCCACHE_VERSION must be set by Packer}"
+: "${SCCACHE_SHA256:?SCCACHE_SHA256 must be set by Packer}"
+
+case "$(uname -m)" in
+x86_64) target="x86_64-unknown-linux-musl" ;;
+*)
+  echo "Unsupported architecture for sccache: $(uname -m)" >&2
+  exit 1
+  ;;
+esac
+
+asset="sccache-v${SCCACHE_VERSION}-${target}"
+archive="$(mktemp)"
+extract_dir="$(mktemp -d)"
+trap 'rm -f "$archive"; rm -rf "$extract_dir"' EXIT
+
+curl -fsSL \
+  "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VERSION}/${asset}.tar.gz" \
+  -o "$archive"
+printf '%s  %s\n' "$SCCACHE_SHA256" "$archive" | sha256sum --check --status
+tar -xzf "$archive" -C "$extract_dir"
+sudo install -m 0755 "$extract_dir/$asset/sccache" /usr/local/bin/sccache
+
+sudo install -m 0644 /tmp/conf/sccache/sccache.env /etc/default/sccache
+sudo install -m 0644 /tmp/conf/sccache/sccache.service /etc/systemd/system/sccache.service
+sudo systemctl daemon-reload
+sudo systemctl enable sccache.service
+
+/usr/local/bin/sccache --version
+sudo systemd-analyze verify /etc/systemd/system/sccache.service
