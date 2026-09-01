@@ -73,6 +73,18 @@ variable "service_account_email" {
   default     = ""
 }
 
+variable "sccache_version" {
+  type        = string
+  description = "sccache release installed in the Buildkite agent image"
+  default     = "0.17.0"
+}
+
+variable "sccache_sha256" {
+  type        = string
+  description = "SHA-256 of the x86_64 musl sccache release archive"
+  default     = "67c4a96dd237c1f518f6b36083f270f9976d516f1e57fce891755ea782e50006"
+}
+
 source "googlecompute" "buildkite-ci-stack" {
   project_id              = var.project_id
   source_image_family     = var.base_image_name == "" ? var.source_image_family : null
@@ -148,6 +160,16 @@ build {
   # Buildkite utilities (excluding S3-related components)
   provisioner "shell" {
     script = "scripts/install-buildkite-utils"
+  }
+
+  # Shared Rust compiler cache. The unit is enabled in the image but starts on
+  # first boot, when the runtime VM metadata identity is available.
+  provisioner "shell" {
+    environment_vars = [
+      "SCCACHE_VERSION=${var.sccache_version}",
+      "SCCACHE_SHA256=${var.sccache_sha256}",
+    ]
+    script = "scripts/install-sccache"
   }
 
   # Docker installation
