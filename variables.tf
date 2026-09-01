@@ -210,7 +210,7 @@ variable "scale_in_control_max_scaled_in_replicas" {
 }
 
 variable "autoscaling_jobs_per_instance" {
-  description = "Target number of Buildkite jobs per instance for autoscaling. Lower values = more parallelization, higher cost."
+  description = "Number of Buildkite jobs assigned to each instance when scaling from the queue-wide job total. Lower values = more parallelization, higher cost."
   type        = number
   default     = 1
 

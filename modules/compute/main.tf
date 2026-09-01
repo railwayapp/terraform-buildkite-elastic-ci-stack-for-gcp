@@ -150,7 +150,12 @@ resource "google_compute_region_autoscaler" "buildkite_agents" {
     max_replicas    = var.max_size
     cooldown_period = var.cooldown_period
 
-    # The autoscaler will scale to: ceil(metric_value / target).
+    # Queue metrics are per-group totals, so single_instance_assignment tells
+    # the autoscaler how much of that total one instance can handle. Using a
+    # utilization target here would multiply the total by the current group
+    # size and cause unnecessary scale-outs.
+    #
+    # The autoscaler will scale to: ceil(metric_value / single_instance_assignment).
     # Note: Metrics are published by buildkite-agent-metrics to:
     # custom.googleapis.com/buildkite/<org-slug>/<MetricName>
     # The filter matches the Queue label to ensure we're scaling based on the correct queue.
@@ -161,10 +166,9 @@ resource "google_compute_region_autoscaler" "buildkite_agents" {
       for_each = toset(var.autoscaling_metric_names)
 
       content {
-        name   = "custom.googleapis.com/buildkite/${local.metrics_org_slug}/${metric.value}"
-        target = var.autoscaling_jobs_per_instance
-        type   = "GAUGE"
-        filter = "resource.type = \"global\" AND metric.label.Queue = \"${var.buildkite_queue}\""
+        name                       = "custom.googleapis.com/buildkite/${local.metrics_org_slug}/${metric.value}"
+        single_instance_assignment = var.autoscaling_jobs_per_instance
+        filter                     = "resource.type = \"global\" AND metric.label.Queue = \"${var.buildkite_queue}\""
       }
     }
 
