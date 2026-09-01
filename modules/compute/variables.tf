@@ -207,7 +207,7 @@ variable "scale_in_control_max_scaled_in_replicas" {
 }
 
 variable "autoscaling_jobs_per_instance" {
-  description = "Target number of Buildkite jobs per instance for autoscaling"
+  description = "Number of Buildkite jobs assigned to each instance when scaling from the queue-wide job total"
   type        = number
   default     = 1
 
