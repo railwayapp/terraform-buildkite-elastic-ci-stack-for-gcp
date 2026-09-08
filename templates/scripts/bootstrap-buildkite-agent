@@ -153,6 +153,23 @@ sudo chown buildkite-agent:buildkite-agent "$AGENT_DOCKER_CFG"
 sudo chmod 600 "$AGENT_DOCKER_CFG"
 echo "Configured AR credential helper for $AR_HOST"
 
+# Stop the agent before docker, not alongside it. The stock apt unit orders
+# against neither, so on VM shutdown systemd is free to stop them in parallel
+# and docker usually wins: the job's container dies first, the agent sees an
+# ordinary command failure, and Buildkite records a normal finished job whose
+# exit code is whatever the dying container produced. Ordering after docker
+# means the agent is stopped first and the job is attributed to
+# signal_reason=agent_stop, which a pipeline can retry on. `After=` also
+# applies to the shutdown transaction after the daemon-reload below, so the
+# unit does not need restarting for this to take effect.
+echo "Installing buildkite-agent shutdown ordering drop-in..."
+sudo mkdir -p /etc/systemd/system/buildkite-agent.service.d
+sudo tee /etc/systemd/system/buildkite-agent.service.d/10-stop-before-docker.conf > /dev/null <<'ORDERING_EOF'
+[Unit]
+After=docker.service containerd.service
+ORDERING_EOF
+sudo chmod 644 /etc/systemd/system/buildkite-agent.service.d/10-stop-before-docker.conf
+
 # Enable and start the buildkite-agent service
 echo "Starting Buildkite agent service..."
 sudo systemctl daemon-reload
