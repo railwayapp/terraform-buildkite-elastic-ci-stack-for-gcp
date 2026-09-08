@@ -68,7 +68,9 @@ else
 fi
 sudo chmod 440 /etc/sudoers.d/buildkite-agent
 
-# Let the agent finish active jobs before systemd forces it to stop.
+# Cap how long systemd waits for the agent to stop. The packaged unit ships
+# TimeoutStopSec=0, which systemd reads as infinity, so this shortens the
+# wait rather than lengthening it.
 sudo mkdir -p /etc/systemd/system/buildkite-agent.service.d
 sudo cp /tmp/conf/buildkite-agent/systemd/buildkite-agent-low-disk-timeout.conf \
   /etc/systemd/system/buildkite-agent.service.d/low-disk-cycle.conf
