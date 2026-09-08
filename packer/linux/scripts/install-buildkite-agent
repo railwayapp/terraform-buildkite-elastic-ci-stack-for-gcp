@@ -68,12 +68,6 @@ else
 fi
 sudo chmod 440 /etc/sudoers.d/buildkite-agent
 
-# Install custom systemd service (overrides the apt package default)
-echo "Installing systemd service..."
-if [ -f /tmp/conf/buildkite-agent/systemd/buildkite-agent.service ]; then
-  sudo cp /tmp/conf/buildkite-agent/systemd/buildkite-agent.service /etc/systemd/system/buildkite-agent.service
-fi
-
 # Let the agent finish active jobs before systemd forces it to stop.
 sudo mkdir -p /etc/systemd/system/buildkite-agent.service.d
 sudo cp /tmp/conf/buildkite-agent/systemd/buildkite-agent-low-disk-timeout.conf \

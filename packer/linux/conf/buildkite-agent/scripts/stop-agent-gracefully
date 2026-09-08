@@ -1,35 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Gracefully stop the Buildkite agent
-echo "--- Gracefully stopping Buildkite agent"
-
-# Get the currently running jobs
-RUNNING_JOBS=$(buildkite-agent-stable meta-data get "jobs" --default="" 2>/dev/null || echo "")
-
-if [[ -n "$RUNNING_JOBS" ]]; then
-  echo "Waiting for running jobs to complete: $RUNNING_JOBS"
-
-  # Wait up to 10 minutes for jobs to complete
-  TIMEOUT=600
-  ELAPSED=0
-
-  while [[ $ELAPSED -lt $TIMEOUT ]]; do
-    if ! pgrep -f "buildkite-agent.*start" > /dev/null; then
-      echo "Agent is no longer running, exiting gracefully"
-      exit 0
-    fi
-
-    sleep 10
-    ELAPSED=$((ELAPSED + 10))
-    echo "Waiting for jobs to complete... (${ELAPSED}s elapsed)"
-  done
-
-  echo "Timeout reached, forcing shutdown"
-fi
-
-# Stop the systemd service
-echo "Stopping buildkite-agent service"
-sudo systemctl stop buildkite-agent || true
-
-echo "Buildkite agent stopped gracefully"
+# Stop the Buildkite agent, letting it finish whatever job it is running.
+#
+# systemctl stop is the entire wait. It sends SIGTERM, which tells the agent to
+# disconnect once its current job completes, and blocks until the unit is gone
+# or TimeoutStopSec expires (10 minutes, from the drop-in installed next to
+# this script). There is no agent-side "am I busy" query to poll for, and an
+# earlier version of this script polled a metadata key that never existed.
+echo "--- Stopping Buildkite agent, waiting for any running job"
+sudo systemctl stop buildkite-agent || echo "warning: systemctl stop buildkite-agent failed"
+echo "Buildkite agent stopped"
