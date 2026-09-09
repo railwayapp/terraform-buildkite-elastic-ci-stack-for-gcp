@@ -46,18 +46,25 @@ resource "google_compute_instance_template" "buildkite_agent" {
   }
 
   metadata = {
-    enable-oslogin                   = "FALSE"
-    buildkite-token                  = var.buildkite_agent_token
-    buildkite-token-secret           = var.buildkite_agent_token_secret
-    buildkite-queue                  = var.buildkite_queue
-    buildkite-tags                   = var.buildkite_agent_tags
-    buildkite-api-endpoint           = var.buildkite_api_endpoint
-    buildkite-spawn                  = var.buildkite_spawn
-    buildkite-git-clone-mirror-flags = var.buildkite_git_clone_mirror_flags
+    enable-oslogin                          = "FALSE"
+    buildkite-token                         = var.buildkite_agent_token
+    buildkite-token-secret                  = var.buildkite_agent_token_secret
+    buildkite-queue                         = var.buildkite_queue
+    buildkite-tags                          = var.buildkite_agent_tags
+    buildkite-api-endpoint                  = var.buildkite_api_endpoint
+    buildkite-disconnect-after-idle-timeout = tostring(var.enable_autoscaling ? var.agent_idle_timeout : 0)
+    shutdown-script                         = file("${path.module}/../../packer/linux/conf/buildkite-agent/scripts/stop-agent-gracefully")
   }
 
   metadata_startup_script = templatefile("${path.module}/templates/startup.sh.tftpl", {
-    bootstrap_script = file("${path.module}/../../templates/scripts/bootstrap-buildkite-agent")
+    bootstrap_script             = file("${path.module}/../../templates/scripts/bootstrap-buildkite-agent")
+    agent_config_template        = file("${path.module}/../../templates/config/buildkite-agent.cfg.template")
+    agent_env_template           = file("${path.module}/../../templates/config/buildkite-agent-env.template")
+    terminate_script             = file("${path.module}/../../packer/linux/conf/buildkite-agent/scripts/terminate-instance")
+    bootstrap_failure_script     = file("${path.module}/../../packer/linux/conf/buildkite-agent/scripts/terminate-instance-after-bootstrap-failure")
+    termination_lifecycle_script = file("${path.module}/../../packer/linux/conf/buildkite-agent/scripts/terminate-instance-after-agent-exit")
+    termination_drop_in          = file("${path.module}/../../packer/linux/conf/buildkite-agent/systemd/termination.conf")
+    enable_self_termination      = var.enable_autoscaling
   })
 
   lifecycle {
@@ -86,12 +93,14 @@ resource "google_compute_region_instance_group_manager" "buildkite_agents" {
     instance_template = google_compute_instance_template.buildkite_agent.id
   }
 
-  distribution_policy_zones        = var.zones
-  distribution_policy_target_shape = var.distribution_policy_target_shape
+  distribution_policy_zones = var.zones
 
+  # Apply new instance templates only when the MIG creates or otherwise
+  # replaces an instance. Proactive updates and redistribution could select an
+  # agent that is still running a job.
   update_policy {
-    type                         = "PROACTIVE"
-    instance_redistribution_type = var.instance_redistribution_type
+    type                         = "OPPORTUNISTIC"
+    instance_redistribution_type = "NONE"
     minimal_action               = "REPLACE"
     max_surge_fixed              = var.max_surge
     max_unavailable_fixed        = var.max_unavailable
@@ -121,19 +130,8 @@ resource "google_compute_health_check" "autohealing" {
   healthy_threshold   = var.health_check_healthy_threshold
   unhealthy_threshold = var.health_check_unhealthy_threshold
 
-  dynamic "tcp_health_check" {
-    for_each = var.health_check_type == "tcp" ? [1] : []
-    content {
-      port = var.health_check_port
-    }
-  }
-
-  dynamic "http_health_check" {
-    for_each = var.health_check_type == "http" ? [1] : []
-    content {
-      port         = var.health_check_port
-      request_path = var.health_check_request_path
-    }
+  tcp_health_check {
+    port = var.health_check_port
   }
 }
 
@@ -146,50 +144,34 @@ resource "google_compute_region_autoscaler" "buildkite_agents" {
   target  = google_compute_region_instance_group_manager.buildkite_agents.id
 
   autoscaling_policy {
-    min_replicas    = var.min_size
-    max_replicas    = var.max_size
-    cooldown_period = var.cooldown_period
+    min_replicas         = var.min_size
+    max_replicas         = var.max_size
+    cooldown_period      = var.cooldown_period
+    stabilization_period = 1
 
-    # Queue metrics are per-group totals, so single_instance_assignment tells
-    # the autoscaler how much of that total one instance can handle. Using a
-    # utilization target here would multiply the total by the current group
-    # size and cause unnecessary scale-outs.
+    # UnfinishedJobsCount is a per-group amount of work: Scheduled + Running +
+    # Waiting jobs. Assigning that work per instance makes the autoscaler target
+    # ceil(UnfinishedJobsCount / autoscaling_jobs_per_instance) instances and
+    # supports scaling out from zero.
     #
-    # The autoscaler will scale to: ceil(metric_value / single_instance_assignment).
-    # Note: Metrics are published by buildkite-agent-metrics to:
+    # Keep the stabilization period near zero: the window retains the peak
+    # recommendation, so a longer period can immediately recreate a VM that an
+    # idle agent just removed. Zero prevented scale-out in runtime testing; one
+    # second allowed scale-out and exact scale-in without replacement churn.
+    # Metrics are published by buildkite-agent-metrics to:
     # custom.googleapis.com/buildkite/<org-slug>/<MetricName>
-    # The filter matches the Queue label to ensure we're scaling based on the correct queue.
     #
-    # Important: The metrics function converts hyphens to underscores in the org slug
-    # (GCP custom metrics don't allow hyphens), so we use local.metrics_org_slug here.
-    dynamic "metric" {
-      for_each = toset(var.autoscaling_metric_names)
-
-      content {
-        name                       = "custom.googleapis.com/buildkite/${local.metrics_org_slug}/${metric.value}"
-        single_instance_assignment = var.autoscaling_jobs_per_instance
-        filter                     = "resource.type = \"global\" AND metric.label.Queue = \"${var.buildkite_queue}\""
-      }
+    # The metrics function converts hyphens to underscores in the org slug
+    # because GCP custom metrics do not allow hyphens in metric type paths.
+    metric {
+      name                       = "custom.googleapis.com/buildkite/${local.metrics_org_slug}/UnfinishedJobsCount"
+      single_instance_assignment = var.autoscaling_jobs_per_instance
+      filter                     = "resource.type = \"global\" AND metric.label.Queue = \"${var.buildkite_queue}\""
     }
 
-    # Throttle scale-in so brief lulls in queue depth don't immediately
-    # terminate cached instances. Without this block GCP applies its
-    # default 10-minute stabilization window. With it set we extend that
-    # to `time_window_sec` and cap how many replicas can be scaled in
-    # per window via `max_scaled_in_replicas`. Useful when first-pull
-    # latency on fresh agents (golangci-lint, ci-ansible build, etc.)
-    # is a meaningful chunk of step wallclock.
-    dynamic "scale_in_control" {
-      for_each = var.scale_in_control_time_window_sec > 0 ? [1] : []
-      content {
-        time_window_sec = var.scale_in_control_time_window_sec
-        max_scaled_in_replicas {
-          fixed = var.scale_in_control_max_scaled_in_replicas
-        }
-      }
-    }
-
-    mode = "ON"
+    # Demand may add capacity, but idle agents remove their own exact VM so GCP
+    # never selects an arbitrary potentially busy instance for scale-in.
+    mode = "ONLY_SCALE_OUT"
   }
 
   # Ensure the metrics function has been invoked and the custom metric exists

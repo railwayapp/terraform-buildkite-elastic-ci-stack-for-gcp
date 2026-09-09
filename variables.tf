@@ -78,16 +78,15 @@ variable "buildkite_agent_tags" {
   default     = ""
 }
 
-variable "buildkite_spawn" {
-  description = "Number of parallel agents to run per instance"
+variable "agent_idle_timeout" {
+  description = "Seconds an autoscaled agent must remain idle before disconnecting and removing its VM from the managed instance group. Set to 0 to disable idle-based scale-in; because the native autoscaler is scale-out-only, capacity will then remain at its high-water mark. Ignored when autoscaling is disabled."
   type        = number
-  default     = 1
-}
+  default     = 600
 
-variable "buildkite_git_clone_mirror_flags" {
-  description = "Flags for git clone --mirror (e.g. '-v --filter=blob:limit=5m')"
-  type        = string
-  default     = "-v"
+  validation {
+    condition     = var.agent_idle_timeout >= 0 && floor(var.agent_idle_timeout) == var.agent_idle_timeout
+    error_message = "Agent idle timeout must be a non-negative integer number of seconds."
+  }
 }
 
 variable "buildkite_agent_release" {
@@ -143,8 +142,8 @@ variable "root_disk_type" {
   default     = "pd-balanced"
 
   validation {
-    condition     = contains(["pd-standard", "pd-balanced", "pd-ssd", "hyperdisk-balanced", "hyperdisk-extreme", "hyperdisk-throughput"], var.root_disk_type)
-    error_message = "Root disk type must be one of: pd-standard, pd-balanced, pd-ssd, hyperdisk-balanced, hyperdisk-extreme, hyperdisk-throughput."
+    condition     = contains(["pd-standard", "pd-balanced", "pd-ssd"], var.root_disk_type)
+    error_message = "Root disk type must be one of: pd-standard, pd-balanced, pd-ssd."
   }
 }
 
@@ -189,52 +188,14 @@ variable "cooldown_period" {
   }
 }
 
-variable "scale_in_control_time_window_sec" {
-  description = <<-EOT
-    Time window (seconds) over which scale-in events are throttled. Set to 0
-    to use GCP's default 10-minute stabilization window. Higher values keep
-    instances alive longer after demand drops, useful when first-pull
-    latency on fresh agents is significant.
-  EOT
-  type        = number
-  default     = 0
-}
-
-variable "scale_in_control_max_scaled_in_replicas" {
-  description = <<-EOT
-    Maximum number of replicas that can be scaled in within
-    `scale_in_control_time_window_sec`. Defaults to 1 — most conservative.
-  EOT
-  type        = number
-  default     = 1
-}
-
 variable "autoscaling_jobs_per_instance" {
-  description = "Number of Buildkite jobs assigned to each instance when scaling from the queue-wide job total. Lower values = more parallelization, higher cost."
+  description = "Number of unfinished Buildkite jobs assigned to each instance for autoscaling. Lower values provide more parallelism at higher cost."
   type        = number
   default     = 1
 
   validation {
     condition     = var.autoscaling_jobs_per_instance >= 1
     error_message = "Jobs per instance must be at least 1."
-  }
-}
-
-variable "autoscaling_metric_names" {
-  description = "Buildkite metrics to use for autoscaling decisions. The autoscaler uses the largest recommendation across all metrics."
-  type        = list(string)
-  default     = ["UnfinishedJobsCount"]
-
-  validation {
-    condition = alltrue([
-      for metric_name in var.autoscaling_metric_names : contains([
-        "ScheduledJobsCount",
-        "RunningJobsCount",
-        "UnfinishedJobsCount",
-        "WaitingJobsCount",
-      ], metric_name)
-    ])
-    error_message = "autoscaling_metric_names must contain only: ScheduledJobsCount, RunningJobsCount, UnfinishedJobsCount, WaitingJobsCount."
   }
 }
 
@@ -428,7 +389,7 @@ variable "health_check_initial_delay_sec" {
 # Update Policy Configuration
 
 variable "max_surge" {
-  description = "Maximum number of instances that can be created above target size during rolling updates"
+  description = "Maximum number of instances stored in the MIG update policy above target size. Pass this value explicitly with --max-surge when starting a gcloud rolling update; template changes are not rolled out proactively."
   type        = number
   default     = 3
 
@@ -439,7 +400,7 @@ variable "max_surge" {
 }
 
 variable "max_unavailable" {
-  description = "Maximum number of instances that can be unavailable during rolling updates"
+  description = "Maximum number of unavailable instances stored in the MIG update policy. Pass this value explicitly with --max-unavailable when starting a gcloud rolling update; template changes are not rolled out proactively."
   type        = number
   default     = 0
 
@@ -475,39 +436,4 @@ variable "labels" {
   description = "Additional labels to apply to all resources for organization and billing"
   type        = map(string)
   default     = {}
-}
-
-variable "health_check_type" {
-  description = <<-EOT
-    Protocol for the autohealing health check: "tcp" or "http".
-
-    "tcp" only proves the kernel completed a handshake, which a hung process
-    still does from its listen backlog, so it cannot distinguish a wedged
-    agent from a healthy one. "http" issues a GET and requires a 200.
-
-    Defaults to "tcp" to preserve existing behaviour.
-  EOT
-  type        = string
-  default     = "tcp"
-
-  validation {
-    condition     = contains(["tcp", "http"], var.health_check_type)
-    error_message = "Health check type must be either \"tcp\" or \"http\"."
-  }
-}
-
-variable "health_check_request_path" {
-  description = <<-EOT
-    Request path for an http health check. Ignored when health_check_type is
-    "tcp".
-
-    Point this at the agent's own health endpoint ("/" on
-    health-check-addr) rather than a per-worker endpoint. "/" reports process
-    liveness only, so a Buildkite API outage cannot mark the whole fleet
-    unhealthy at once and trigger a fleet-wide recreate loop. The per-worker
-    /agent/N endpoints return 500 on heartbeat failure and are unsafe to
-    autoheal on for that reason.
-  EOT
-  type        = string
-  default     = "/"
 }

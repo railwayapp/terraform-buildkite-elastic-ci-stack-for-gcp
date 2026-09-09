@@ -8,6 +8,12 @@ Terraform modules for running autoscaling [Buildkite](https://buildkite.com/) ag
 
 Full documentation is available at <https://buildkite.com/docs/agent/v3/gcp/elastic-ci-stack/elastic-ci-stack>.
 
+Repository documentation:
+
+- [Agent scaling and instance updates](docs/instance-updates.md) — describes
+  job-safe scale-in, idle-agent removal, and opportunistic template rollout
+- [GCP image release pipeline](docs/image-release-pipeline.md)
+
 ## Getting Started
 
 The module ships with a set of default values which can be overridden as needed, but should be sufficient for most use cases.
