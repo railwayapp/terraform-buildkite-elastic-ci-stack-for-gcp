@@ -1,0 +1,14 @@
+[Unit]
+Description=Railway agent prep: mono git mirror, Docker Hub auth, Artifact Registry credential helper
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/railway-agent-prep
+# The mono mirror clone dominates this; a cold clone can take several minutes.
+TimeoutStartSec=20min
+
+[Install]
+WantedBy=multi-user.target

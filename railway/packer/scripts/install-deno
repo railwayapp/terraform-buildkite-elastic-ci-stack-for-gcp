@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${DENO_VERSION:?DENO_VERSION must be set by Packer}"
+
+curl -fsSL https://deno.land/install.sh | sudo DENO_INSTALL=/usr/local sh -s "v${DENO_VERSION}"
+deno --version
