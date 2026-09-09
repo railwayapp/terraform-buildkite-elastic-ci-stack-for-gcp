@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Offline checks for the Railway image layer. Needs packer; shellcheck is used if present.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/../packer"
+
+echo "--- packer fmt"
+packer fmt -check -diff railway-agent-image.pkr.hcl
+
+echo "--- packer validate"
+packer init railway-agent-image.pkr.hcl >/dev/null
+packer validate railway-agent-image.pkr.hcl
+
+echo "--- bash -n"
+for f in build scripts/* conf/agent-prep/railway-agent-prep; do
+  bash -n "$f" && echo "  ok  $f"
+done
+
+if command -v shellcheck >/dev/null; then
+  echo "--- shellcheck"
+  shellcheck -S warning build scripts/* conf/agent-prep/railway-agent-prep
+fi
+
+echo "ok"

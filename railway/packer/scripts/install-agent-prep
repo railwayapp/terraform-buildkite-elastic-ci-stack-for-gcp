@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONF=/tmp/railway-conf/agent-prep
+
+# The prep script merges Docker config with jq. Present on upstream's image
+# today, but cheap to guarantee.
+sudo apt-get update -qq
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq jq
+
+sudo install -m 0755 "$CONF/railway-agent-prep" /usr/local/bin/railway-agent-prep
+sudo install -m 0644 "$CONF/railway-agent-prep.service" /etc/systemd/system/railway-agent-prep.service
+sudo mkdir -p /etc/systemd/system/buildkite-agent.service.d
+sudo install -m 0644 "$CONF/buildkite-agent-railway.conf" /etc/systemd/system/buildkite-agent.service.d/railway.conf
+
+# System-wide rather than ~buildkite-agent/.ssh: the GCP guest agent rewrites
+# the user's .ssh on boot, which removed a per-user config in the old fork.
+if ! grep -q '^Host github.com' /etc/ssh/ssh_config; then
+  sudo tee -a /etc/ssh/ssh_config > /dev/null <<'EOF'
+
+Host github.com
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+EOF
+fi
+
+sudo systemctl daemon-reload
+sudo systemctl enable railway-agent-prep.service
+sudo systemd-analyze verify /etc/systemd/system/railway-agent-prep.service
+sudo systemd-analyze verify buildkite-agent.service

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Runs as root from railway-agent-prep.service before buildkite-agent starts.
+# Every step degrades to a warning: a failure here must not keep the agent down.
+set -uo pipefail
+
+md() {
+  curl -fs --connect-timeout 2 --max-time 5 -H 'Metadata-Flavor: Google' \
+    "http://metadata.google.internal/computeMetadata/v1/$1"
+}
+
+PROJECT_ID="$(md project/project-id)" || { echo "cannot read project id from metadata" >&2; exit 0; }
+ZONE="$(md instance/zone | awk -F/ '{print $NF}')"
+AGENT_HOME=/var/lib/buildkite-agent
+
+as_agent() { runuser -u buildkite-agent -- "$@"; }
+
+# --- mono git mirror, so the first job on this VM is a fetch, not a full clone
+MIRROR_PATH="$AGENT_HOME/git-mirrors/git-github-com-railwayapp-mono-git"
+if [[ ! -d "$MIRROR_PATH" ]]; then
+  if SSH_KEY="$(gcloud secrets versions access latest --secret=private_ssh_key --project="$PROJECT_ID" 2>/dev/null)"; then
+    KEYFILE="$(mktemp)"
+    printf '%s\n' "$SSH_KEY" > "$KEYFILE"
+    chown buildkite-agent:buildkite-agent "$KEYFILE"
+    chmod 0600 "$KEYFILE"
+    as_agent mkdir -p "$AGENT_HOME/git-mirrors"
+    if as_agent env "GIT_SSH_COMMAND=ssh -i $KEYFILE -o StrictHostKeyChecking=no" \
+        git clone --mirror -- git@github.com:railwayapp/mono.git "$MIRROR_PATH"; then
+      echo "pre-warmed mono git mirror"
+    else
+      echo "warning: mono mirror pre-warm failed; the agent will clone on its first job" >&2
+    fi
+    rm -f "$KEYFILE"
+  else
+    echo "warning: no private_ssh_key secret in $PROJECT_ID; skipping mirror pre-warm" >&2
+  fi
+fi
+
+# --- Docker config for the agent user. The agent unit sets HOME=/var/lib/buildkite-agent,
+#     so this is the file the daemon reads for job containers.
+DOCKER_DIR="$AGENT_HOME/.docker"
+CFG="$DOCKER_DIR/config.json"
+install -d -o buildkite-agent -g buildkite-agent -m 0700 "$DOCKER_DIR"
+[[ -f "$CFG" ]] || echo '{}' > "$CFG"
+
+# Docker Hub as the railwaycorp org. Without it every agent shares the Cloud NAT
+# egress IP and the anonymous 100-pulls-per-6h limit.
+if DH_TOKEN="$(gcloud secrets versions access latest --secret=buildkite-dockerhub-token --project="$PROJECT_ID" 2>/dev/null)"; then
+  DH_AUTH="$(printf 'railwaycorp:%s' "$DH_TOKEN" | base64 -w0)"
+  if jq --arg a "$DH_AUTH" '.auths["https://index.docker.io/v1/"] = {auth: $a}' "$CFG" > "$CFG.new"; then
+    mv "$CFG.new" "$CFG"
+    echo "configured Docker Hub auth"
+  else
+    rm -f "$CFG.new"
+    echo "warning: failed to write Docker Hub auth" >&2
+  fi
+else
+  echo "warning: no buildkite-dockerhub-token secret in $PROJECT_ID; Docker Hub pulls are anonymous" >&2
+fi
+
+# Regional Artifact Registry authenticates through the GCE metadata server via gcloud.
+AR_HOST="${ZONE%-*}-docker.pkg.dev"
+if jq --arg h "$AR_HOST" '.credHelpers[$h] = "gcloud"' "$CFG" > "$CFG.new"; then
+  mv "$CFG.new" "$CFG"
+  echo "configured credential helper for $AR_HOST"
+else
+  rm -f "$CFG.new"
+  echo "warning: failed to write AR credential helper" >&2
+fi
+
+chown buildkite-agent:buildkite-agent "$CFG"
+chmod 0600 "$CFG"
+exit 0
