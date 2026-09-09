@@ -10,6 +10,7 @@ ZONE="us-west1-a"
 MACHINE_TYPE="n2-standard-8"
 BUILD_NUMBER="$(date +%Y%m%d-%H%M%S)"
 SOURCE_IMAGE=""
+IMAGE_FAMILY="buildkite-ci-stack"
 SERVICE_ACCOUNT_EMAIL=""
 
 usage() {
@@ -21,6 +22,8 @@ Usage: $0 [options]
   -m, --machine-type TYPE    Builder machine type (default: $MACHINE_TYPE)
   -b, --build-number N       Build number (default: timestamp)
   -i, --source-image NAME    Pin an exact upstream image instead of the newest in the family
+  -f, --image-family NAME    Family to publish into (default: $IMAGE_FAMILY). Use a test family
+                             for a trial build; production instance templates resolve the default.
   -s, --service-account EMAIL
   -h, --help
 EOF
@@ -33,6 +36,7 @@ while [[ $# -gt 0 ]]; do
     -m|--machine-type)    MACHINE_TYPE="$2"; shift 2 ;;
     -b|--build-number)    BUILD_NUMBER="$2"; shift 2 ;;
     -i|--source-image)    SOURCE_IMAGE="$2"; shift 2 ;;
+    -f|--image-family)    IMAGE_FAMILY="$2"; shift 2 ;;
     -s|--service-account) SERVICE_ACCOUNT_EMAIL="$2"; shift 2 ;;
     -h|--help)            usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage; exit 1 ;;
@@ -47,6 +51,7 @@ echo "zone           $ZONE"
 echo "machine type   $MACHINE_TYPE"
 echo "build number   $BUILD_NUMBER"
 echo "source image   ${SOURCE_IMAGE:-newest in buildkite-gcp-stack/buildkite-ci-stack-x86-64}"
+echo "image family   $IMAGE_FAMILY"
 
 packer init railway-agent-image.pkr.hcl
 packer build \
@@ -55,5 +60,6 @@ packer build \
   -var "machine_type=$MACHINE_TYPE" \
   -var "build_number=$BUILD_NUMBER" \
   -var "source_image=$SOURCE_IMAGE" \
+  -var "image_family=$IMAGE_FAMILY" \
   -var "service_account_email=$SERVICE_ACCOUNT_EMAIL" \
   railway-agent-image.pkr.hcl

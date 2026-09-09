@@ -15,6 +15,7 @@ in the upstream commit they were built from) and adds:
 | Deno, used by `.buildkite/lib/*.ts` pipeline generation | `/usr/local/bin/deno` |
 | mono git-mirror pre-warm, Docker Hub auth, Artifact Registry credential helper | `railway-agent-prep.service`, a oneshot the agent unit waits for at boot |
 | GitHub host-key policy for the mirror clone | `/etc/ssh/ssh_config` |
+| Disk-pressure agent cycling: below 10 GiB or 250k inodes free on `/`, stop the agent | `railway-low-disk-cycle.timer`, every minute |
 
 Terraform-side changes (`buildkite_spawn`, health check type, hyperdisk, and so
 on) are separate commits on top of upstream, not here.
@@ -52,11 +53,22 @@ Checks that run without touching GCP:
 railway/scripts/check
 ```
 
+## How disk-pressure cycling works now
+
+The old fork's cycler stopped the agent and then called `recreate-instances` on
+the MIG itself. It no longer has to. Upstream's lifecycle drop-in puts
+`ExecStopPost=terminate-instance-after-agent-exit` on `buildkite-agent.service`,
+so stopping the agent for any reason removes the VM through the same
+flock-protected path idle scale-in uses. The cycler is therefore just
+"if `/` is low, `systemctl stop buildkite-agent`". It depends on that drop-in,
+which the module installs when autoscaling is enabled.
+
+A `TimeoutStopSec=10min` drop-in bounds the stop, because the packaged unit ships
+`TimeoutStopSec=0` and systemd reads that as infinity. Upstream's own
+`docker-low-disk-gc.timer` is disabled in favour of cycling; the regular
+`docker-gc` timer stays.
+
 ## Deliberately absent
 
-- The low-disk agent cycler from the old fork. Upstream's job-safe scale-in now
-  removes VMs through `terminate-instance`; whether we still need a
-  disk-pressure trigger, and whether it should be rebuilt on that primitive, is
-  an open decision.
 - `git-clone-mirror-flags`. The old fork made it configurable and mono set it to
   `-v`, which is the agent's default.

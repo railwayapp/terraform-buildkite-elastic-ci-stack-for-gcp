@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONF=/tmp/railway-conf/low-disk
+
+sudo install -d -m 0755 /usr/local/lib/railway
+sudo install -m 0644 "$CONF/cycle-agent-on-low-disk.ts" /usr/local/lib/railway/cycle-agent-on-low-disk.ts
+sudo install -m 0644 "$CONF/railway-low-disk-cycle.service" /etc/systemd/system/railway-low-disk-cycle.service
+sudo install -m 0644 "$CONF/railway-low-disk-cycle.timer" /etc/systemd/system/railway-low-disk-cycle.timer
+sudo mkdir -p /etc/systemd/system/buildkite-agent.service.d
+sudo install -m 0644 "$CONF/buildkite-agent-stop-timeout.conf" /etc/systemd/system/buildkite-agent.service.d/railway-stop-timeout.conf
+
+# Upstream's aggressive low-disk docker prune runs against caches a job may be
+# using. Cycling the VM is the disk-pressure response here; the regular
+# docker-gc timer stays.
+sudo systemctl disable docker-low-disk-gc.timer 2>/dev/null || true
+
+sudo systemctl daemon-reload
+sudo systemctl enable railway-low-disk-cycle.timer
+sudo systemd-analyze verify /etc/systemd/system/railway-low-disk-cycle.service /etc/systemd/system/railway-low-disk-cycle.timer
+sudo systemd-analyze verify buildkite-agent.service

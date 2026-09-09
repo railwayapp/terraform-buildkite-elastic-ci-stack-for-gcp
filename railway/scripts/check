@@ -21,4 +21,13 @@ if command -v shellcheck >/dev/null; then
   shellcheck -S warning build scripts/* conf/agent-prep/railway-agent-prep
 fi
 
+if command -v deno >/dev/null; then
+  echo "--- deno"
+  deno fmt --check conf/low-disk/*.ts
+  deno check conf/low-disk/cycle-agent-on-low-disk.ts
+  deno test --allow-env conf/low-disk/cycle-agent-on-low-disk_test.ts
+else
+  echo "--- deno: not installed, skipping fmt/check/test of the low-disk cycler"
+fi
+
 echo "ok"

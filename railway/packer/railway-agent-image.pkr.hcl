@@ -144,6 +144,10 @@ build {
     script = "scripts/install-agent-prep"
   }
 
+  provisioner "shell" {
+    script = "scripts/install-low-disk-cycle"
+  }
+
   # Which upstream image this was layered on, for anyone debugging a VM.
   provisioner "shell" {
     inline = [
