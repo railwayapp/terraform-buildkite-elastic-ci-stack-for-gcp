@@ -47,15 +47,15 @@ module "compute" {
   stack_name = var.stack_name
 
   # Buildkite configuration
-  buildkite_organization_slug      = var.buildkite_organization_slug
-  buildkite_agent_token            = var.buildkite_agent_token
-  buildkite_agent_token_secret     = var.buildkite_agent_token_secret
-  buildkite_spawn                  = var.buildkite_spawn
-  buildkite_git_clone_mirror_flags = var.buildkite_git_clone_mirror_flags
-  buildkite_agent_release          = var.buildkite_agent_release
-  buildkite_queue                  = var.buildkite_queue
-  buildkite_agent_tags             = var.buildkite_agent_tags
-  buildkite_api_endpoint           = var.buildkite_api_endpoint
+  buildkite_organization_slug  = var.buildkite_organization_slug
+  buildkite_agent_token        = var.buildkite_agent_token
+  buildkite_agent_token_secret = var.buildkite_agent_token_secret
+  buildkite_agent_release      = var.buildkite_agent_release
+  buildkite_queue              = var.buildkite_queue
+  buildkite_agent_tags         = var.buildkite_agent_tags
+  buildkite_spawn              = var.buildkite_spawn
+  buildkite_api_endpoint       = var.buildkite_api_endpoint
+  agent_idle_timeout           = var.agent_idle_timeout
 
   # Instance configuration
   machine_type      = var.machine_type
@@ -64,14 +64,11 @@ module "compute" {
   root_disk_type    = var.root_disk_type
 
   # Scaling configuration
-  min_size                                = var.min_size
-  max_size                                = var.max_size
-  cooldown_period                         = var.cooldown_period
-  scale_in_control_time_window_sec        = var.scale_in_control_time_window_sec
-  scale_in_control_max_scaled_in_replicas = var.scale_in_control_max_scaled_in_replicas
-  autoscaling_jobs_per_instance           = var.autoscaling_jobs_per_instance
-  autoscaling_metric_names                = var.autoscaling_metric_names
-  enable_autoscaling                      = var.enable_autoscaling
+  min_size                      = var.min_size
+  max_size                      = var.max_size
+  cooldown_period               = var.cooldown_period
+  autoscaling_jobs_per_instance = var.autoscaling_jobs_per_instance
+  enable_autoscaling            = var.enable_autoscaling
 
   # Health check configuration
   enable_autohealing               = var.enable_autohealing

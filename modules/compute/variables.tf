@@ -108,18 +108,6 @@ variable "buildkite_agent_token_secret" {
   default     = ""
 }
 
-variable "buildkite_spawn" {
-  description = "Number of parallel agents to run per instance"
-  type        = number
-  default     = 1
-}
-
-variable "buildkite_git_clone_mirror_flags" {
-  description = "Flags for git clone --mirror (e.g. '-v --filter=blob:limit=5m')"
-  type        = string
-  default     = "-v"
-}
-
 variable "buildkite_agent_release" {
   description = "Buildkite agent release channel (stable, beta, edge)"
   type        = string
@@ -143,10 +131,32 @@ variable "buildkite_agent_tags" {
   default     = ""
 }
 
+variable "buildkite_spawn" {
+  description = "Number of agents to run per instance. The agent process exits, and the VM removes itself from the group, only once every spawned agent has disconnected."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.buildkite_spawn >= 1 && floor(var.buildkite_spawn) == var.buildkite_spawn
+    error_message = "buildkite_spawn must be a positive integer."
+  }
+}
+
 variable "buildkite_api_endpoint" {
   description = "Buildkite API endpoint URL"
   type        = string
   default     = "https://agent.buildkite.com/v3"
+}
+
+variable "agent_idle_timeout" {
+  description = "Seconds an autoscaled agent must remain idle before disconnecting and removing its VM from the managed instance group. Set to 0 to disable idle-based scale-in; because the native autoscaler is scale-out-only, capacity will then remain at its high-water mark. Ignored when autoscaling is disabled."
+  type        = number
+  default     = 600
+
+  validation {
+    condition     = var.agent_idle_timeout >= 0 && floor(var.agent_idle_timeout) == var.agent_idle_timeout
+    error_message = "Agent idle timeout must be a non-negative integer number of seconds."
+  }
 }
 
 variable "min_size" {
@@ -182,56 +192,14 @@ variable "cooldown_period" {
   }
 }
 
-variable "scale_in_control_time_window_sec" {
-  description = <<-EOT
-    Time window (seconds) over which scale-in events are throttled. Set to 0
-    to use GCP's default 10-minute stabilization window. Higher values keep
-    instances alive longer after demand drops, useful when first-pull
-    latency on fresh agents is significant. The autoscaler will not scale
-    in more than `scale_in_control_max_scaled_in_replicas` instances within
-    this window.
-  EOT
-  type        = number
-  default     = 0
-}
-
-variable "scale_in_control_max_scaled_in_replicas" {
-  description = <<-EOT
-    Maximum number of replicas that can be scaled in within
-    `scale_in_control_time_window_sec`. Only used when the time window is
-    set above 0. Defaults to 1 — scale-in happens at most one instance per
-    window, the most conservative setting.
-  EOT
-  type        = number
-  default     = 1
-}
-
 variable "autoscaling_jobs_per_instance" {
-  description = "Number of Buildkite jobs assigned to each instance when scaling from the queue-wide job total"
+  description = "Number of unfinished Buildkite jobs assigned to each instance for autoscaling"
   type        = number
   default     = 1
 
   validation {
     condition     = var.autoscaling_jobs_per_instance >= 1
     error_message = "Jobs per instance must be at least 1."
-  }
-}
-
-variable "autoscaling_metric_names" {
-  description = "Buildkite metrics to use for autoscaling decisions. The autoscaler uses the largest recommendation across all metrics."
-  type        = list(string)
-  default     = ["UnfinishedJobsCount"]
-
-  validation {
-    condition = alltrue([
-      for metric_name in var.autoscaling_metric_names : contains([
-        "ScheduledJobsCount",
-        "RunningJobsCount",
-        "UnfinishedJobsCount",
-        "WaitingJobsCount",
-      ], metric_name)
-    ])
-    error_message = "autoscaling_metric_names must contain only: ScheduledJobsCount, RunningJobsCount, UnfinishedJobsCount, WaitingJobsCount."
   }
 }
 
@@ -308,7 +276,7 @@ variable "health_check_initial_delay_sec" {
 }
 
 variable "max_surge" {
-  description = "Maximum number of instances that can be created above the target size during updates"
+  description = "Maximum number of instances stored in the MIG update policy above target size. Pass this value explicitly with --max-surge when starting a gcloud rolling update; template changes are not rolled out proactively."
   type        = number
   default     = 3
 
@@ -319,7 +287,7 @@ variable "max_surge" {
 }
 
 variable "max_unavailable" {
-  description = "Maximum number of instances that can be unavailable during updates"
+  description = "Maximum number of unavailable instances stored in the MIG update policy. Pass this value explicitly with --max-unavailable when starting a gcloud rolling update; template changes are not rolled out proactively."
   type        = number
   default     = 0
 
@@ -363,42 +331,6 @@ variable "autoscaler_depends_on" {
   description = "List of resources the autoscaler should depend on (e.g., metrics function initialization)"
   type        = any
   default     = []
-}
-
-variable "distribution_policy_target_shape" {
-  description = <<-EOT
-    Regional MIG zone distribution shape. "ANY" lets the MIG place instances in
-    whichever zone has capacity (best for ephemeral agent pools — survives a zone
-    running out of stock). "EVEN" forces balanced zone distribution and, combined
-    with proactive redistribution, makes the MIG delete+recreate instances to
-    rebalance — which deletes agents mid-job and thrashes endlessly when a zone is
-    capacity-exhausted. CI agents don't need zonal HA, so default to ANY.
-  EOT
-  type        = string
-  default     = "ANY"
-
-  validation {
-    condition     = contains(["ANY", "BALANCED", "EVEN", "ANY_SINGLE_ZONE"], var.distribution_policy_target_shape)
-    error_message = "target_shape must be one of ANY, BALANCED, EVEN, ANY_SINGLE_ZONE."
-  }
-}
-
-variable "instance_redistribution_type" {
-  description = <<-EOT
-    Whether the MIG proactively rebalances instances across zones. "NONE" leaves
-    the distribution alone; "PROACTIVE" deletes instances from over-represented
-    zones and recreates them elsewhere — with no awareness of whether an instance
-    is running a job, so it kills busy agents (exit 137) and loops forever when
-    recreates fail under capacity exhaustion. Must be NONE when target_shape is
-    ANY/BALANCED. Default NONE for agent pools.
-  EOT
-  type        = string
-  default     = "NONE"
-
-  validation {
-    condition     = contains(["NONE", "PROACTIVE"], var.instance_redistribution_type)
-    error_message = "instance_redistribution_type must be NONE or PROACTIVE."
-  }
 }
 
 variable "health_check_type" {

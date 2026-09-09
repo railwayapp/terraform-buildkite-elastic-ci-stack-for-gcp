@@ -32,7 +32,7 @@ resource "google_project_iam_member" "agent_logging_writer" {
   member  = "serviceAccount:${google_service_account.agent.email}"
 }
 
-# Allows agents to recreate themselves when their disk runs low
+# Allows agents to identify and remove their own VM from the managed instance group
 resource "google_project_iam_custom_role" "agent_instance_management" {
   role_id     = var.agent_custom_role_id
   title       = "Elastic CI Stack Agent Instance Management"
@@ -40,10 +40,11 @@ resource "google_project_iam_custom_role" "agent_instance_management" {
   project     = var.project_id
 
   permissions = [
+    # GCP's REST references require get for regional listManagedInstances and
+    # update for deleteInstances; direct compute.instances.delete is not used.
+    # gcloud also polls the resulting regional operation to completion.
     "compute.instanceGroupManagers.get",
     "compute.instanceGroupManagers.update",
-    "compute.instances.get",
-    "compute.zoneOperations.get",
     "compute.regionOperations.get",
   ]
 }
