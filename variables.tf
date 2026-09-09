@@ -78,6 +78,17 @@ variable "buildkite_agent_tags" {
   default     = ""
 }
 
+variable "buildkite_spawn" {
+  description = "Number of agents to run per instance. The agent process exits, and the VM removes itself from the group, only once every spawned agent has disconnected."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.buildkite_spawn >= 1 && floor(var.buildkite_spawn) == var.buildkite_spawn
+    error_message = "buildkite_spawn must be a positive integer."
+  }
+}
+
 variable "agent_idle_timeout" {
   description = "Seconds an autoscaled agent must remain idle before disconnecting and removing its VM from the managed instance group. Set to 0 to disable idle-based scale-in; because the native autoscaler is scale-out-only, capacity will then remain at its high-water mark. Ignored when autoscaling is disabled."
   type        = number

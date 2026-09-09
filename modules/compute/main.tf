@@ -51,6 +51,7 @@ resource "google_compute_instance_template" "buildkite_agent" {
     buildkite-token-secret                  = var.buildkite_agent_token_secret
     buildkite-queue                         = var.buildkite_queue
     buildkite-tags                          = var.buildkite_agent_tags
+    buildkite-spawn                         = tostring(var.buildkite_spawn)
     buildkite-api-endpoint                  = var.buildkite_api_endpoint
     buildkite-disconnect-after-idle-timeout = tostring(var.enable_autoscaling ? var.agent_idle_timeout : 0)
     shutdown-script                         = file("${path.module}/../../packer/linux/conf/buildkite-agent/scripts/stop-agent-gracefully")

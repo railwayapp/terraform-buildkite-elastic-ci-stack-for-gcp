@@ -131,6 +131,17 @@ variable "buildkite_agent_tags" {
   default     = ""
 }
 
+variable "buildkite_spawn" {
+  description = "Number of agents to run per instance. The agent process exits, and the VM removes itself from the group, only once every spawned agent has disconnected."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.buildkite_spawn >= 1 && floor(var.buildkite_spawn) == var.buildkite_spawn
+    error_message = "buildkite_spawn must be a positive integer."
+  }
+}
+
 variable "buildkite_api_endpoint" {
   description = "Buildkite API endpoint URL"
   type        = string

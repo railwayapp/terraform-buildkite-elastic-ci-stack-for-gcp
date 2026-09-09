@@ -41,6 +41,7 @@ BUILDKITE_API_ENDPOINT=$(get_metadata "buildkite-api-endpoint" "")
 BUILDKITE_GCP_ENABLE_SECRET_MANAGER=$(get_metadata "buildkite-enable-secret-manager" "true")
 BUILDKITE_DISCONNECT_AFTER_JOB=$(get_metadata "buildkite-disconnect-after-job" "false")
 BUILDKITE_DISCONNECT_AFTER_IDLE_TIMEOUT=$(get_metadata "buildkite-disconnect-after-idle-timeout" "0")
+BUILDKITE_SPAWN=$(get_metadata "buildkite-spawn" "1")
 
 if ! [[ "$BUILDKITE_DISCONNECT_AFTER_IDLE_TIMEOUT" =~ ^[0-9]+$ ]]; then
     echo "ERROR: buildkite-disconnect-after-idle-timeout metadata must be a non-negative integer"
@@ -72,12 +73,14 @@ export BUILDKITE_API_ENDPOINT
 export BUILDKITE_GCP_ENABLE_SECRET_MANAGER
 export BUILDKITE_DISCONNECT_AFTER_JOB
 export BUILDKITE_DISCONNECT_AFTER_IDLE_TIMEOUT
+export BUILDKITE_SPAWN
 export PROJECT_ID
 export ZONE
 export INSTANCE_NAME
 
 echo "Configuring Buildkite agent with:"
 echo "  Name: $BUILDKITE_AGENT_NAME"
+echo "  Spawn: $BUILDKITE_SPAWN"
 echo "  Queue: $BUILDKITE_QUEUE"
 echo "  Priority: $BUILDKITE_PRIORITY"
 echo "  Tags: $BUILDKITE_TAGS"
