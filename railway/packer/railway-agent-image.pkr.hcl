@@ -30,8 +30,14 @@ variable "build_number" {
 
 variable "service_account_email" {
   type        = string
-  description = "Service account for the build instance. Empty uses the project's default Compute Engine account."
-  default     = ""
+  description = "Service account for the build instance. It reads the deploy SSH key secret to clone the mono mirror, so the deploy pool's account is the natural choice."
+  default     = "bk-deploy-prod-uw1@railway-infra.iam.gserviceaccount.com"
+}
+
+variable "mirror_secret" {
+  type        = string
+  description = "Secret Manager secret holding the SSH key that can read railwayapp/mono"
+  default     = "private_ssh_key"
 }
 
 variable "source_image_project" {
@@ -142,6 +148,14 @@ build {
 
   provisioner "shell" {
     script = "scripts/install-agent-prep"
+  }
+
+  provisioner "shell" {
+    environment_vars = [
+      "MIRROR_SECRET=${var.mirror_secret}",
+      "MIRROR_SECRET_PROJECT=${var.project_id}",
+    ]
+    script = "scripts/bake-mono-mirror"
   }
 
   provisioner "shell" {

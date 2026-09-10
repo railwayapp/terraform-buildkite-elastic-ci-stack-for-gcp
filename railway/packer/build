@@ -11,7 +11,7 @@ MACHINE_TYPE="n2-standard-8"
 BUILD_NUMBER="$(date +%Y%m%d-%H%M%S)"
 SOURCE_IMAGE=""
 IMAGE_FAMILY="buildkite-ci-stack"
-SERVICE_ACCOUNT_EMAIL=""
+SERVICE_ACCOUNT_EMAIL="bk-deploy-prod-uw1@railway-infra.iam.gserviceaccount.com"
 
 usage() {
   cat <<EOF
@@ -25,6 +25,8 @@ Usage: $0 [options]
   -f, --image-family NAME    Family to publish into (default: $IMAGE_FAMILY). Use a test family
                              for a trial build; production instance templates resolve the default.
   -s, --service-account EMAIL
+                             Build VM identity (default: $SERVICE_ACCOUNT_EMAIL). Must read the
+                             private_ssh_key secret; the mono mirror is cloned into the image.
   -h, --help
 EOF
 }
