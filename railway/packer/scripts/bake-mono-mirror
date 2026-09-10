@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Clone the mono mirror into the image so a new VM does not spend three minutes
+# doing it at boot. The agent fetches whatever a job needs on top of it, so the
+# copy only has to exist, not be current. Runs on the build VM as its service
+# account, which must be able to read the deploy SSH key secret.
+set -euo pipefail
+
+: "${MIRROR_SECRET:=private_ssh_key}"
+: "${MIRROR_SECRET_PROJECT:=railway-infra}"
+: "${MIRROR_REPO:=git@github.com:railwayapp/mono.git}"
+
+AGENT_HOME=/var/lib/buildkite-agent
+MIRROR_PATH="$AGENT_HOME/git-mirrors/git-github-com-railwayapp-mono-git"
+
+KEYFILE="$(mktemp)"
+# The file is handed to the agent user below, and /tmp is sticky: only root can remove it then.
+trap 'sudo rm -f "$KEYFILE"' EXIT
+gcloud secrets versions access latest --secret="$MIRROR_SECRET" --project="$MIRROR_SECRET_PROJECT" > "$KEYFILE"
+sudo chown buildkite-agent:buildkite-agent "$KEYFILE"
+sudo chmod 0600 "$KEYFILE"
+
+sudo -u buildkite-agent mkdir -p "$AGENT_HOME/git-mirrors"
+sudo -u buildkite-agent env "GIT_SSH_COMMAND=ssh -i $KEYFILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+  git clone --quiet --mirror -- "$MIRROR_REPO" "$MIRROR_PATH"
+
+# The same shape the agent's own mirror clone produces, so its fetch path works.
+sudo -u buildkite-agent git -C "$MIRROR_PATH" config --get remote.origin.mirror | grep -qx true
+sudo -u buildkite-agent git -C "$MIRROR_PATH" rev-parse --verify --quiet refs/heads/master > /dev/null
+echo "mono mirror at $(sudo -u buildkite-agent git -C "$MIRROR_PATH" rev-parse --short refs/heads/master), $(sudo du -sh "$MIRROR_PATH" | cut -f1)"

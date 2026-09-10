@@ -7,7 +7,7 @@ After=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/local/bin/railway-agent-prep
-# The mono mirror clone dominates this; a cold clone can take several minutes.
+# Seconds when the image carries the mono mirror; a fallback clone takes minutes.
 TimeoutStartSec=20min
 
 [Install]

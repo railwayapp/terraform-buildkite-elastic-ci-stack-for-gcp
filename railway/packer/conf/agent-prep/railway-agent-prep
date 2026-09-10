@@ -14,7 +14,8 @@ AGENT_HOME=/var/lib/buildkite-agent
 
 as_agent() { runuser -u buildkite-agent -- "$@"; }
 
-# --- mono git mirror, so the first job on this VM is a fetch, not a full clone
+# --- mono git mirror. The image ships one (packer/scripts/bake-mono-mirror);
+#     this clone is the fallback for an image built without it.
 MIRROR_PATH="$AGENT_HOME/git-mirrors/git-github-com-railwayapp-mono-git"
 if [[ ! -d "$MIRROR_PATH" ]]; then
   if SSH_KEY="$(gcloud secrets versions access latest --secret=private_ssh_key --project="$PROJECT_ID" 2>/dev/null)"; then

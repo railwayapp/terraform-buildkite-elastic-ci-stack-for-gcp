@@ -34,6 +34,9 @@ survives that: it makes `buildkite-agent.service` want and order after
 
 Requires packer, gcloud application-default credentials with access to
 `railway-infra`, and read access to `buildkite-gcp-stack` (already granted).
+The build VM runs as `bk-deploy-prod-uw1@railway-infra` (override with `-s`),
+which reads the `private_ssh_key` secret to clone the mono mirror into the image;
+the caller needs `iam.serviceAccounts.actAs` on it (project editors have it).
 
 ```
 cd railway/packer
@@ -46,6 +49,13 @@ to family `buildkite-ci-stack` in `railway-infra`, which is what mono's
 `image = ".../family/buildkite-ci-stack"` resolves. The upstream image it was
 built from is recorded in `/etc/railway-agent-image` on the VM and in the
 `upstream_image` image label.
+
+The image carries a bare mirror of `railwayapp/mono` at
+`/var/lib/buildkite-agent/git-mirrors/`, cloned at build time. The agent's
+checkout fetches whatever a job's commit needs on top of it, so an older image
+still checks out in seconds; rebuild the image when the fetch gets slow, not on
+a schedule. Without it a fresh VM spent about three minutes cloning before the
+agent could start.
 
 Checks that run without touching GCP:
 
