@@ -17,6 +17,14 @@ in the upstream commit they were built from) and adds:
 | GitHub host-key policy for the mirror clone | `/etc/ssh/ssh_config` |
 | Disk-pressure agent cycling: below 10 GiB or 250k inodes free on `/`, stop the agent | `railway-low-disk-cycle.timer`, every minute |
 
+The sccache client is the checksum-pinned Railway release used by mono's Rust
+steps. The daemon allows 128 MiB IPC frames: the default 8 MiB rejects larger
+Rust cache archives, causing recompilation and potentially losing their error
+statistics when the connection breaks. This is a finite transport limit, not
+the disk-cache size (20 GiB). Entries above the limit remain uncached; changing
+the limit does not repair lost statistics. Capability-check probes are skipped
+to avoid contention on GCS's shared check object.
+
 Terraform-side changes (`buildkite_spawn`, health check type, hyperdisk, and so
 on) are separate commits on top of upstream, not here.
 

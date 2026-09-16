@@ -26,6 +26,8 @@ if command -v deno >/dev/null; then
   deno fmt --check conf/low-disk/*.ts
   deno check conf/low-disk/cycle-agent-on-low-disk.ts
   deno test --allow-env conf/low-disk/cycle-agent-on-low-disk_test.ts
+  deno fmt --check conf/sccache/config_test.ts
+  deno test --allow-read conf/sccache/config_test.ts
 else
   echo "--- deno: not installed, skipping fmt/check/test of the low-disk cycler"
 fi
