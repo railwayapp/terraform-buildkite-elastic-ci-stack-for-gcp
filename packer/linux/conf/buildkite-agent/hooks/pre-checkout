@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-checkout hook for Buildkite agent
+# Runs before the repository checkout, so it sees whatever the previous job
+# on this agent slot left behind.
+
+# CI containers run as root against the bind-mounted checkout and leave
+# root-owned files in it (a Go `make build-ci` writing bin/<binary>, a
+# generator writing into the tree). Normally the job's own pre-exit chowns
+# them back, but a cancelled job -- or one whose agent is lost -- is killed
+# part-way through its hook chain and skips that. The buildkite-agent user
+# then cannot unlink those files, the next checkout fails with
+# "Failed to remove ... permission denied" on every attempt, and the agent
+# stays poisoned for that pipeline until someone clears the directory by
+# hand. This hook is the backstop for that case. It has to live on the host:
+# a repo-side plugin resolves relative to the checkout, which does not exist
+# yet at pre-checkout.
+#
+# Only files not owned by the agent are touched, so a clean checkout costs one
+# directory walk and no chown calls. Not fatal: a failure here only means the
+# checkout may fail later, and saying so is more useful than aborting every
+# job on this agent.
+
+echo "--- Running pre-checkout hook"
+
+checkout="${BUILDKITE_BUILD_CHECKOUT_PATH:-}"
+image="alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc"
+
+if [[ -n "$checkout" && -d "$checkout" ]]; then
+  uid="$(id -u)"
+  gid="$(id -g)"
+  if ! docker run --rm -v "$checkout":"$checkout" "$image" \
+      find "$checkout" ! -user "$uid" -exec chown -h "$uid:$gid" {} + ; then
+    echo "pre-checkout: could not restore ownership of $checkout; checkout may fail on root-owned files" >&2
+  fi
+fi
+
+echo "Buildkite agent pre-checkout hook completed"

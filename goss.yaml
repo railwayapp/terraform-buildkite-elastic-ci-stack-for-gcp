@@ -28,6 +28,12 @@ file:
     owner: buildkite-agent
     group: buildkite-agent
 
+  /etc/buildkite-agent/hooks/pre-checkout:
+    exists: true
+    mode: "0755"
+    owner: buildkite-agent
+    group: buildkite-agent
+
   /etc/buildkite-agent/templates:
     filetype: directory
     exists: true
