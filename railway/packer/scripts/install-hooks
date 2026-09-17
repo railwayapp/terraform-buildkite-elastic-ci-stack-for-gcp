@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONF=/tmp/railway-conf/hooks
+
+# Same directory and ownership as the hooks upstream's image already installs
+# (environment, pre-exit); the agent's hooks-path points here.
+sudo install -o buildkite-agent -g buildkite-agent -m 0755 "$CONF/pre-checkout" /etc/buildkite-agent/hooks/pre-checkout

@@ -16,6 +16,7 @@ in the upstream commit they were built from) and adds:
 | mono git-mirror pre-warm, Docker Hub auth, Artifact Registry credential helper | `railway-agent-prep.service`, a oneshot the agent unit waits for at boot |
 | GitHub host-key policy for the mirror clone | `/etc/ssh/ssh_config` |
 | Disk-pressure agent cycling: below 10 GiB or 250k inodes free on `/`, stop the agent | `railway-low-disk-cycle.timer`, every minute |
+| Discard a checkout a cancelled job left root-owned files in, so the slot is not wedged | `/etc/buildkite-agent/hooks/pre-checkout` |
 
 The sccache client is the checksum-pinned Railway release used by mono's Rust
 steps. The daemon allows 128 MiB IPC frames: the default 8 MiB rejects larger

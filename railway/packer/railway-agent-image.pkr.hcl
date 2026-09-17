@@ -158,6 +158,10 @@ build {
   }
 
   provisioner "shell" {
+    script = "scripts/install-hooks"
+  }
+
+  provisioner "shell" {
     environment_vars = [
       "MIRROR_SECRET=${var.mirror_secret}",
       "MIRROR_SECRET_PROJECT=${var.project_id}",

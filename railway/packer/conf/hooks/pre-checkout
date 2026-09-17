@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Agent-level pre-checkout hook. Runs before the agent's checkout, as the agent
+# user, so it sees whatever the previous job on this slot left behind.
+#
+# CI containers run as root against the bind-mounted checkout. The job's own
+# docker-chown pre-exit restores ownership, but a cancelled job is killed
+# part-way through its hook chain and skips it; the agent then cannot unlink
+# the root-owned files and every later checkout on this slot fails. This lives
+# on the host because a repo-side plugin resolves relative to the checkout,
+# which does not exist yet at this point.
+#
+# A poisoned checkout is discarded rather than repaired: the agent re-clones it
+# from the local mono mirror in a few seconds, and there are no ownership or
+# mode edge cases to reason about. A clean checkout costs one directory walk.
+set -euo pipefail
+
+checkout="${BUILDKITE_BUILD_CHECKOUT_PATH:-}"
+[[ -n "$checkout" && -d "$checkout" ]] || exit 0
+
+if sudo find "$checkout" ! -user "$(id -u)" -print -quit | grep -q .; then
+  echo "pre-checkout: the previous job left files not owned by the agent; discarding $checkout"
+  sudo rm -rf -- "$checkout" \
+    || echo "pre-checkout: could not remove $checkout; the checkout may fail" >&2
+fi
