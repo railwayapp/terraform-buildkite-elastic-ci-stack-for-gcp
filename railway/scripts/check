@@ -12,13 +12,13 @@ packer init railway-agent-image.pkr.hcl >/dev/null
 packer validate railway-agent-image.pkr.hcl
 
 echo "--- bash -n"
-for f in build scripts/* conf/agent-prep/railway-agent-prep; do
+for f in build scripts/* conf/agent-prep/railway-agent-prep conf/hooks/*; do
   bash -n "$f" && echo "  ok  $f"
 done
 
 if command -v shellcheck >/dev/null; then
   echo "--- shellcheck"
-  shellcheck -S warning build scripts/* conf/agent-prep/railway-agent-prep
+  shellcheck -S warning build scripts/* conf/agent-prep/railway-agent-prep conf/hooks/*
 fi
 
 if command -v deno >/dev/null; then
