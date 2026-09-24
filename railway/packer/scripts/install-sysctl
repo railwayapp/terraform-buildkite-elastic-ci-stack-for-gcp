@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONF=/tmp/railway-conf/sysctl
+
+# systemd-sysctl applies /etc/sysctl.d at every boot. Loading it here fails the
+# build on a bad key instead of leaving it to a silent boot-time warning.
+sudo install -m 0644 "$CONF/60-railway-aio.conf" /etc/sysctl.d/60-railway-aio.conf
+sudo sysctl -p /etc/sysctl.d/60-railway-aio.conf
