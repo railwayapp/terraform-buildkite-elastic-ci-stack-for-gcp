@@ -173,6 +173,10 @@ build {
     script = "scripts/install-low-disk-cycle"
   }
 
+  provisioner "shell" {
+    script = "scripts/install-sysctl"
+  }
+
   # Which upstream image this was layered on, for anyone debugging a VM.
   provisioner "shell" {
     inline = [
