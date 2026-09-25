@@ -24,6 +24,12 @@ definitions:
       image: "davidanson/markdownlint-cli2:v0.18.1"
       workdir: "/workdir"
       command: [".", "--config", ".markdownlint.json"]
+  deno: &deno
+    docker#v5.14.0:
+      image: "denoland/deno:2.7.9"
+      workdir: "/workdir"
+      entrypoint: "/bin/sh"
+      chown: true
   shellcheck: &shellcheck
     shellcheck#v1.4.0:
       files:
@@ -106,6 +112,18 @@ steps:
         key: shellcheck
         plugins:
           - *shellcheck
+
+      - label: ":deno: Railway low-disk tests"
+        key: railway-low-disk-tests
+        if_changed:
+          - "railway/packer/conf/low-disk/**"
+          - ".buildkite/pipeline.yml"
+        command: |
+          deno fmt --check railway/packer/conf/low-disk/*.ts
+          deno lint railway/packer/conf/low-disk/*.ts
+          deno test --allow-env railway/packer/conf/low-disk/cycle-agent-on-low-disk_test.ts
+        plugins:
+          - *deno
 
   - group: "📖 Docs and Examples"
     steps:
