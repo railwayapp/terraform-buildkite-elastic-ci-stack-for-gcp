@@ -58,10 +58,11 @@ module "compute" {
   agent_idle_timeout           = var.agent_idle_timeout
 
   # Instance configuration
-  machine_type      = var.machine_type
-  image             = var.image
-  root_disk_size_gb = var.root_disk_size_gb
-  root_disk_type    = var.root_disk_type
+  machine_type          = var.machine_type
+  fallback_machine_type = var.fallback_machine_type
+  image                 = var.image
+  root_disk_size_gb     = var.root_disk_size_gb
+  root_disk_type        = var.root_disk_type
 
   # Scaling configuration
   min_size                      = var.min_size

@@ -96,6 +96,24 @@ resource "google_compute_region_instance_group_manager" "buildkite_agents" {
 
   distribution_policy_zones = var.zones
 
+  dynamic "instance_flexibility_policy" {
+    for_each = var.fallback_machine_type == null ? [] : [1]
+
+    content {
+      instance_selections {
+        name          = "preferred"
+        machine_types = [var.machine_type]
+        rank          = 1
+      }
+
+      instance_selections {
+        name          = "fallback"
+        machine_types = [var.fallback_machine_type]
+        rank          = 2
+      }
+    }
+  }
+
   # Apply new instance templates only when the MIG creates or otherwise
   # replaces an instance. Proactive updates and redistribution could select an
   # agent that is still running a job.

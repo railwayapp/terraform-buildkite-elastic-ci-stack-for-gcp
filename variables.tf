@@ -130,6 +130,17 @@ variable "machine_type" {
   }
 }
 
+variable "fallback_machine_type" {
+  description = "Optional alternate machine type for new MIG instances when machine_type is unavailable. Both types must support the configured boot disk and agent workload."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.fallback_machine_type == null || can(regex("^[a-z][a-z0-9-]+$", var.fallback_machine_type))
+    error_message = "fallback_machine_type must be a valid GCP machine type."
+  }
+}
+
 variable "image" {
   description = "Source image for boot disk. Use a custom Packer-built image or a public Buildkite image."
   type        = string
