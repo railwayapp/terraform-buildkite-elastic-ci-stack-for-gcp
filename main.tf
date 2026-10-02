@@ -41,10 +41,11 @@ module "iam" {
 module "compute" {
   source = "./modules/compute"
 
-  project_id = var.project_id
-  region     = var.region
-  zones      = var.zones
-  stack_name = var.stack_name
+  project_id                       = var.project_id
+  region                           = var.region
+  zones                            = var.zones
+  distribution_policy_target_shape = var.distribution_policy_target_shape
+  stack_name                       = var.stack_name
 
   # Buildkite configuration
   buildkite_organization_slug  = var.buildkite_organization_slug

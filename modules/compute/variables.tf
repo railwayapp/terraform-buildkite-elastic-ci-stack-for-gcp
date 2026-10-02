@@ -63,6 +63,17 @@ variable "machine_type" {
   }
 }
 
+variable "distribution_policy_target_shape" {
+  description = "Regional MIG target shape: EVEN, BALANCED, ANY or ANY_SINGLE_ZONE. Instance flexibility (fallback_machine_type) rejects EVEN. Null leaves the current shape."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.distribution_policy_target_shape == null || contains(["EVEN", "BALANCED", "ANY", "ANY_SINGLE_ZONE"], coalesce(var.distribution_policy_target_shape, "EVEN"))
+    error_message = "distribution_policy_target_shape must be EVEN, BALANCED, ANY or ANY_SINGLE_ZONE."
+  }
+}
+
 variable "fallback_machine_type" {
   description = "Optional alternate machine type for new MIG instances when machine_type is unavailable. Both types must support the configured boot disk and agent workload."
   type        = string
