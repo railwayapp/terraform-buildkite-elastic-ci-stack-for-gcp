@@ -94,7 +94,8 @@ resource "google_compute_region_instance_group_manager" "buildkite_agents" {
     instance_template = google_compute_instance_template.buildkite_agent.id
   }
 
-  distribution_policy_zones = var.zones
+  distribution_policy_zones        = var.zones
+  distribution_policy_target_shape = var.distribution_policy_target_shape
 
   dynamic "instance_flexibility_policy" {
     for_each = var.fallback_machine_type == null ? [] : [1]

@@ -74,6 +74,12 @@ variable "fallback_machine_type" {
   }
 }
 
+variable "distribution_policy_target_shape" {
+  description = "Optional MIG zone distribution shape: EVEN, BALANCED, ANY or ANY_SINGLE_ZONE. GCP rejects fallback_machine_type with EVEN."
+  type        = string
+  default     = null
+}
+
 variable "image" {
   description = "Source image for boot disk (Buildkite CI Stack recommended)"
   type        = string
